@@ -329,6 +329,7 @@
 /* ══════ CONFIG ══════ */
 const config = {
   webhook: 'https://stanmak.app.n8n.cloud/webhook/aden-tutor-chat',
+  summaryWebhook: 'https://stanmak.app.n8n.cloud/webhook/aden-tutor-summary',
   supabaseUrl: 'https://dsdmpqnuvggohwxqhgod.supabase.co',
   supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzZG1wcW51dmdnb2h3eHFoZ29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MDAzNDIsImV4cCI6MjA5MjA3NjM0Mn0.Tfq0RtndhsEwqxcoTyw2MOPS4bJjDv8ec4qobSOO8R0',
 };
@@ -658,19 +659,33 @@ function updateStats() {
 }
 async function generateSummary() {
   document.getElementById('loading-bar-wrap').classList.remove('hidden');
+  document.querySelector('.generate-btn').disabled = true;
   const week = allSessions.filter(s => (Date.now() - new Date(s.date)) < 7*24*60*60*1000);
   try {
-    const res = await fetch(config.webhook, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'weekly_summary', sessions: week.map(s => ({ subject: s.subject, date: s.date, messageCount: s.messages.length, messages: s.messages.map(m => ({ role: m.role, content: m.text.slice(0,200) })) })) }) });
+    const res = await fetch(config.summaryWebhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessions: week.map(s => ({
+          subject: s.subject, date: s.date, messageCount: s.messages.length,
+          messages: s.messages.map(m => ({ role: m.role, content: (m.text || '').slice(0, 300) }))
+        }))
+      })
+    });
     const data = await res.json();
-    const summary = data.summary || data.reply || data.text || 'Summary generated.';
+    const summary = data.summary || data.reply || 'Summary generated.';
     const flags = data.flags || [];
     document.getElementById('ai-summary-text').innerHTML = summary.replace(/\n/g,'<br>');
     document.getElementById('ai-summary-card').style.display = 'block';
     document.getElementById('flag-list').innerHTML = flags.length
       ? flags.map(f => `<div class="flag-item"><span class="flag-icon">${f.icon||'⚠️'}</span><span class="flag-text">${escapeHtml(f.text)}</span></div>`).join('')
       : `<div class="flag-item"><span class="flag-icon">✅</span><span class="flag-text" style="font-family:sans-serif;">No concerns this week. Aden is engaging well!</span></div>`;
-  } catch(e) { alert('Could not generate summary.'); }
+  } catch(e) {
+    alert('Could not generate summary. Make sure the summary workflow is active in n8n.');
+    console.error(e);
+  }
   document.getElementById('loading-bar-wrap').classList.add('hidden');
+  document.querySelector('.generate-btn').disabled = false;
 }
 
 /* ══════ HELPERS ══════ */
