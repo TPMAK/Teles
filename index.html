@@ -375,10 +375,10 @@ let isSending = false;
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
 /* ══════ INIT ══════ */
-function initApp() {
+async function initApp() {
   document.getElementById('main-app').style.display = 'flex';
   applyRole();
-  loadSessionsFromStorage();
+  await loadSessions();
   currentSessionId = generateId();
   sessionMessages = [];
   document.getElementById('messages').innerHTML = '';
@@ -556,7 +556,7 @@ function showThinking() {
 }
 function hideThinking(id) { const el = document.getElementById(id); if (el) el.remove(); }
 
-/* ══════ STORAGE ══════ */
+/* ══════ STORAGE — Supabase primary, localStorage fallback ══════ */
 function saveCurrentSession() {
   if (sessionMessages.length < 2) return;
   const session = {
@@ -565,12 +565,38 @@ function saveCurrentSession() {
   };
   const idx = allSessions.findIndex(s => s.id === currentSessionId);
   if (idx >= 0) allSessions[idx] = session; else allSessions.unshift(session);
-  localStorage.setItem('aden_sessions', JSON.stringify(allSessions));
+  try { localStorage.setItem('aden_sessions', JSON.stringify(allSessions)); } catch(e) {}
   pushToSupabase(session);
 }
-function loadSessionsFromStorage() {
+
+async function loadSessions() {
+  // Show loading state
+  document.getElementById('session-status').textContent = 'Loading...';
+  try {
+    const res = await fetch(
+      `${config.supabaseUrl}/rest/v1/sessions?order=date.desc&limit=100`,
+      { headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}` } }
+    );
+    if (res.ok) {
+      const rows = await res.json();
+      allSessions = rows.map(r => ({
+        id: r.id,
+        subject: r.subject,
+        date: r.date,
+        photoCount: r.photo_count || 0,
+        messages: (() => {
+          try { return typeof r.messages === 'string' ? JSON.parse(r.messages) : (r.messages || []); }
+          catch(e) { return []; }
+        })(),
+      }));
+      try { localStorage.setItem('aden_sessions', JSON.stringify(allSessions)); } catch(e) {}
+      return;
+    }
+  } catch(e) { console.warn('Supabase load failed, using localStorage', e); }
+  // Fallback
   try { allSessions = JSON.parse(localStorage.getItem('aden_sessions') || '[]'); } catch(e) { allSessions = []; }
 }
+
 async function pushToSupabase(session) {
   try {
     await fetch(`${config.supabaseUrl}/rest/v1/sessions`, {
@@ -578,7 +604,7 @@ async function pushToSupabase(session) {
       headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify({ id: session.id, subject: session.subject, date: session.date, messages: JSON.stringify(session.messages), photo_count: session.photoCount, message_count: session.messages.length })
     });
-  } catch(e) { console.warn('Supabase sync failed:', e); }
+  } catch(e) { console.warn('Supabase push failed:', e); }
 }
 
 /* ══════ HISTORY ══════ */
