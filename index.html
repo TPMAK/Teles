@@ -624,7 +624,7 @@ function renderHistory() {
     const bc = s.subject === 'Writing' ? 'writing' : s.subject === 'Science' ? 'science' : '';
     const title = s.title || sessionTitle(s.messages);
     return `<div class="session-card" onclick="openSession('${s.id}')">
-      <div class="session-card-header"><span class="session-card-title">${escapeHtml(title)}</span><span class="session-card-date">${formatDate(s.date)}</span></div>
+      <div class="session-card-header"><span class="session-card-title">${escapeHtml(title)}</span><span class="session-card-date">${formatDateTime(s.date)}</span></div>
       <div class="session-card-meta"><span class="badge ${bc}">${s.subject}</span>${s.photoCount > 0 ? `<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">📸 ${s.photoCount}</span>` : ''}</div>
       ${pt ? `<div class="session-preview">${escapeHtml(pt)}</div>` : ''}
       <div class="session-msg-count">${s.messages.length} messages</div>
@@ -637,7 +637,7 @@ function openSession(id) {
   if (!session) return;
   overlaySessionId = id;
   document.getElementById('overlay-title').textContent = session.title || sessionTitle(session.messages);
-  document.getElementById('overlay-meta').textContent = `${session.subject} · ${formatDate(session.date)} · ${session.messages.length} messages`;
+  document.getElementById('overlay-meta').textContent = `${session.subject} · ${formatDateTime(session.date)} · ${session.messages.length} messages`;
   document.getElementById('overlay-messages').innerHTML = session.messages.map(m => {
     const av = m.role === 'tutor' ? '🦉' : 'A';
     return `<div class="msg ${m.role}"><div class="msg-avatar">${av}</div><div><div class="msg-bubble"><p>${escapeHtml(m.text).replace(/\n/g,'<br>')}</p>${m.photo?`<img class="msg-img" src="${m.photo}" alt="">`:''}
@@ -744,6 +744,7 @@ function sessionTitle(messages) {
 function escapeHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function formatTime(d) { return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 function formatDate(iso) { return new Date(iso).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }); }
+function formatDateTime(iso) { return formatDate(iso) + ' · ' + formatTime(new Date(iso)); }
 </script>
 </body>
 </html>
