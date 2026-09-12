@@ -242,7 +242,7 @@
   </header>
 
   <div class="action-bar" id="action-bar">
-    <button class="new-session-btn" id="new-session-btn" onclick="startNewSession(true)">✦ New session</button>
+    <button class="new-session-btn" id="new-session-btn" onclick="startNewSession()">✦ New session</button>
     <span class="session-label" id="session-count"></span>
   </div>
 
@@ -416,15 +416,10 @@ function switchTab(tab) {
   if (tab === 'summary') updateStats();
 }
 
-/* ══════ NEW SESSION — fixed ══════ */
-function startNewSession(showDivider) {
+/* ══════ NEW SESSION — starts over with a clean chat ══════ */
+function startNewSession() {
   // Save what we have first
   saveCurrentSession();
-
-  // Show a divider in the existing chat
-  if (showDivider && sessionMessages.length > 0) {
-    appendDivider();
-  }
 
   // Reset state
   currentSessionId = generateId();
@@ -433,12 +428,10 @@ function startNewSession(showDivider) {
   removePhoto();
   updateSessionStatus();
 
-  // Show fresh welcome message in the same chat
+  // Clear the chat completely and show a fresh welcome
+  document.getElementById('messages').innerHTML = '';
   appendWelcomeMessage();
-
-  // Scroll to bottom
-  const wrap = document.getElementById('messages');
-  setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 50);
+  document.getElementById('messages').scrollTop = 0;
 }
 
 function appendWelcomeMessage() {
