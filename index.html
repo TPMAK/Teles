@@ -192,6 +192,7 @@
   .overlay-header { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .overlay-title { font-size: 15px; font-weight: 700; }
   .overlay-close { font-size: 18px; background: var(--surface2); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text2); }
+  .overlay-continue { font-size: 13px; font-family: sans-serif; font-weight: 600; padding: 7px 14px; border-radius: 20px; background: var(--teal); color: white; }
   .overlay-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
 </style>
 </head>
@@ -242,7 +243,7 @@
   </header>
 
   <div class="action-bar" id="action-bar">
-    <button class="new-session-btn" id="new-session-btn" onclick="startNewSession()">✦ New session</button>
+    <button class="new-session-btn" id="new-session-btn" onclick="startNewSession(true)">✦ New session</button>
     <span class="session-label" id="session-count"></span>
   </div>
 
@@ -319,7 +320,10 @@
         <div class="overlay-title" id="overlay-title">Session</div>
         <div style="font-size:11px;color:var(--text3);font-family:sans-serif;margin-top:2px" id="overlay-meta"></div>
       </div>
-      <button class="overlay-close" onclick="document.getElementById('session-overlay').classList.add('hidden')">✕</button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="overlay-continue hidden" id="overlay-continue-btn" onclick="resumeSession()">↩ Continue</button>
+        <button class="overlay-close" onclick="document.getElementById('session-overlay').classList.add('hidden')">✕</button>
+      </div>
     </div>
     <div class="overlay-messages" id="overlay-messages"></div>
   </div>
@@ -416,10 +420,15 @@ function switchTab(tab) {
   if (tab === 'summary') updateStats();
 }
 
-/* ══════ NEW SESSION — starts over with a clean chat ══════ */
-function startNewSession() {
+/* ══════ NEW SESSION — fixed ══════ */
+function startNewSession(showDivider) {
   // Save what we have first
   saveCurrentSession();
+
+  // Show a divider in the existing chat
+  if (showDivider && sessionMessages.length > 0) {
+    appendDivider();
+  }
 
   // Reset state
   currentSessionId = generateId();
@@ -428,10 +437,12 @@ function startNewSession() {
   removePhoto();
   updateSessionStatus();
 
-  // Clear the chat completely and show a fresh welcome
-  document.getElementById('messages').innerHTML = '';
+  // Show fresh welcome message in the same chat
   appendWelcomeMessage();
-  document.getElementById('messages').scrollTop = 0;
+
+  // Scroll to bottom
+  const wrap = document.getElementById('messages');
+  setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 50);
 }
 
 function appendWelcomeMessage() {
@@ -622,9 +633,11 @@ function renderHistory() {
     </div>`;
   }).join('');
 }
+let overlaySessionId = null;
 function openSession(id) {
   const session = allSessions.find(s => s.id === id);
   if (!session) return;
+  overlaySessionId = id;
   document.getElementById('overlay-title').textContent = `${session.subject} session`;
   document.getElementById('overlay-meta').textContent = `${formatDate(session.date)} · ${session.messages.length} messages`;
   document.getElementById('overlay-messages').innerHTML = session.messages.map(m => {
@@ -632,9 +645,41 @@ function openSession(id) {
     return `<div class="msg ${m.role}"><div class="msg-avatar">${av}</div><div><div class="msg-bubble"><p>${escapeHtml(m.text).replace(/\n/g,'<br>')}</p>${m.photo?`<img class="msg-img" src="${m.photo}" alt="">`:''}
     </div><div class="msg-time">${formatTime(new Date(m.time))}</div></div></div>`;
   }).join('');
+  // Only students can continue chatting; parents get a read-only preview
+  document.getElementById('overlay-continue-btn').classList.toggle('hidden', currentRole === 'parent');
   document.getElementById('session-overlay').classList.remove('hidden');
 }
 function closeOverlay(e) { if (e.target === document.getElementById('session-overlay')) document.getElementById('session-overlay').classList.add('hidden'); }
+
+/* ══════ RESUME A PAST SESSION INTO THE LIVE CHAT ══════ */
+function resumeSession() {
+  const session = allSessions.find(s => s.id === overlaySessionId);
+  if (!session) return;
+
+  // Save any in-progress session before switching
+  saveCurrentSession();
+
+  // Load the past session as the active one
+  currentSessionId = session.id;
+  currentSubject = session.subject || 'General';
+  sessionMessages = session.messages.map(m => ({ ...m }));
+  photoBase64 = null;
+  removePhoto();
+
+  // Rebuild the chat view from the loaded messages
+  const wrap = document.getElementById('messages');
+  wrap.innerHTML = session.messages.map(m => {
+    const av = m.role === 'tutor' ? '🦉' : 'A';
+    return `<div class="msg ${m.role}"><div class="msg-avatar">${av}</div><div><div class="msg-bubble"><p>${escapeHtml(m.text).replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</p>${m.photo?`<img class="msg-img" src="${m.photo}" alt="">`:''}</div><div class="msg-time">${formatTime(new Date(m.time))}</div></div></div>`;
+  }).join('');
+
+  updateSessionStatus();
+
+  // Close overlay and go to chat
+  document.getElementById('session-overlay').classList.add('hidden');
+  switchTab('chat');
+  setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 50);
+}
 
 /* ══════ SUMMARY ══════ */
 function updateStats() {
