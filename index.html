@@ -243,7 +243,7 @@
   </header>
 
   <div class="action-bar" id="action-bar">
-    <button class="new-session-btn" id="new-session-btn" onclick="startNewSession(true)">✦ New session</button>
+    <button class="new-session-btn" id="new-session-btn" onclick="startNewSession()">✦ New session</button>
     <span class="session-label" id="session-count"></span>
   </div>
 
@@ -420,29 +420,22 @@ function switchTab(tab) {
   if (tab === 'summary') updateStats();
 }
 
-/* ══════ NEW SESSION — fixed ══════ */
-function startNewSession(showDivider) {
-  // Save what we have first
+/* ══════ NEW SESSION — clean slate, Claude-style ══════ */
+function startNewSession() {
+  // Archive the current session to History / Supabase first
   saveCurrentSession();
-
-  // Show a divider in the existing chat
-  if (showDivider && sessionMessages.length > 0) {
-    appendDivider();
-  }
 
   // Reset state
   currentSessionId = generateId();
+  currentSubject = 'General';
   sessionMessages = [];
   photoBase64 = null;
   removePhoto();
-  updateSessionStatus();
 
-  // Show fresh welcome message in the same chat
+  // Wipe the visible chat and show a single fresh welcome
+  document.getElementById('messages').innerHTML = '';
   appendWelcomeMessage();
-
-  // Scroll to bottom
-  const wrap = document.getElementById('messages');
-  setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 50);
+  updateSessionStatus();
 }
 
 function appendWelcomeMessage() {
@@ -567,6 +560,7 @@ function saveCurrentSession() {
   const session = {
     id: currentSessionId, subject: currentSubject, date: new Date().toISOString(),
     messages: [...sessionMessages], photoCount: sessionMessages.filter(m => m.photo).length,
+    title: sessionTitle(sessionMessages),
   };
   const idx = allSessions.findIndex(s => s.id === currentSessionId);
   if (idx >= 0) allSessions[idx] = session; else allSessions.unshift(session);
@@ -589,11 +583,14 @@ async function loadSessions() {
         subject: r.subject,
         date: r.date,
         photoCount: r.photo_count || 0,
+        title: r.title || '',
         messages: (() => {
           try { return typeof r.messages === 'string' ? JSON.parse(r.messages) : (r.messages || []); }
           catch(e) { return []; }
         })(),
       }));
+      // Backfill titles for older rows that don't have one
+      allSessions.forEach(s => { if (!s.title) s.title = sessionTitle(s.messages); });
       try { localStorage.setItem('aden_sessions', JSON.stringify(allSessions)); } catch(e) {}
       return;
     }
@@ -607,7 +604,7 @@ async function pushToSupabase(session) {
     await fetch(`${config.supabaseUrl}/rest/v1/sessions`, {
       method: 'POST',
       headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify({ id: session.id, subject: session.subject, date: session.date, messages: JSON.stringify(session.messages), photo_count: session.photoCount, message_count: session.messages.length })
+      body: JSON.stringify({ id: session.id, subject: session.subject, date: session.date, messages: JSON.stringify(session.messages), photo_count: session.photoCount, message_count: session.messages.length, title: session.title })
     });
   } catch(e) { console.warn('Supabase push failed:', e); }
 }
@@ -625,8 +622,9 @@ function renderHistory() {
     const preview = s.messages.find(m => m.role === 'tutor');
     const pt = preview ? preview.text.slice(0,100) + (preview.text.length > 100 ? '…' : '') : '';
     const bc = s.subject === 'Writing' ? 'writing' : s.subject === 'Science' ? 'science' : '';
+    const title = s.title || sessionTitle(s.messages);
     return `<div class="session-card" onclick="openSession('${s.id}')">
-      <div class="session-card-header"><span class="session-card-title">${escapeHtml(s.subject)} session</span><span class="session-card-date">${formatDate(s.date)}</span></div>
+      <div class="session-card-header"><span class="session-card-title">${escapeHtml(title)}</span><span class="session-card-date">${formatDate(s.date)}</span></div>
       <div class="session-card-meta"><span class="badge ${bc}">${s.subject}</span>${s.photoCount > 0 ? `<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">📸 ${s.photoCount}</span>` : ''}</div>
       ${pt ? `<div class="session-preview">${escapeHtml(pt)}</div>` : ''}
       <div class="session-msg-count">${s.messages.length} messages</div>
@@ -638,8 +636,8 @@ function openSession(id) {
   const session = allSessions.find(s => s.id === id);
   if (!session) return;
   overlaySessionId = id;
-  document.getElementById('overlay-title').textContent = `${session.subject} session`;
-  document.getElementById('overlay-meta').textContent = `${formatDate(session.date)} · ${session.messages.length} messages`;
+  document.getElementById('overlay-title').textContent = session.title || sessionTitle(session.messages);
+  document.getElementById('overlay-meta').textContent = `${session.subject} · ${formatDate(session.date)} · ${session.messages.length} messages`;
   document.getElementById('overlay-messages').innerHTML = session.messages.map(m => {
     const av = m.role === 'tutor' ? '🦉' : 'A';
     return `<div class="msg ${m.role}"><div class="msg-avatar">${av}</div><div><div class="msg-bubble"><p>${escapeHtml(m.text).replace(/\n/g,'<br>')}</p>${m.photo?`<img class="msg-img" src="${m.photo}" alt="">`:''}
@@ -731,6 +729,17 @@ function updateSessionStatus() {
   const c = sessionMessages.length;
   document.getElementById('session-status').textContent = c === 0 ? 'Ready to learn' : `${Math.ceil(c/2)} question${Math.ceil(c/2)!==1?'s':''} explored`;
   document.getElementById('session-count').textContent = c > 0 ? `${Math.ceil(c/2)} exchange${Math.ceil(c/2)!==1?'s':''}` : '';
+}
+function sessionTitle(messages) {
+  // Use Aden's first real question as the summary line for the session
+  const firstUser = (messages || []).find(m => m.role === 'user' && (m.text || '').trim());
+  let t = firstUser ? firstUser.text.trim() : '';
+  if (!t) {
+    const hasPhoto = (messages || []).some(m => m.photo);
+    return hasPhoto ? '📸 Homework photo' : 'Chat session';
+  }
+  t = t.replace(/\s+/g, ' ');
+  return t.length > 60 ? t.slice(0, 60).trim() + '…' : t;
 }
 function escapeHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function formatTime(d) { return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
