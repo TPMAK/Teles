@@ -352,7 +352,10 @@
       </div>
     </div>
     <div class="summary-card" id="ai-summary-card" style="display:none">
-      <h3><span class="dot" style="background:var(--purple)"></span>AI summary</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap;">
+        <h3 style="margin-bottom:0;"><span class="dot" style="background:var(--purple)"></span>AI summary</h3>
+        <span id="summary-saved-at" style="font-size:11px;color:var(--text3);font-family:sans-serif;"></span>
+      </div>
       <div id="ai-summary-text" style="font-size:15.5px;line-height:1.75;color:var(--text);font-family:sans-serif;"></div>
     </div>
     <div class="summary-card">
@@ -363,13 +366,13 @@
     </div>
     <button class="generate-btn" onclick="generateSummary()"><span id="generate-btn-label">✨ Generate summary</span></button>
 
-    <div class="summary-card" id="ask-card" style="display:none">
-      <h3><span class="dot" style="background:var(--purple)"></span>Ask about this period</h3>
-      <p style="font-size:13px;color:var(--text2);font-family:sans-serif;margin-bottom:12px;line-height:1.5;">Dig deeper into anything from the sessions above — ask for exact quotes, where he struggled, or what a flag was about.</p>
+    <div class="summary-card" id="ask-card">
+      <h3><span class="dot" style="background:var(--purple)"></span>Ask about Aden</h3>
+      <p style="font-size:13px;color:var(--text2);font-family:sans-serif;margin-bottom:12px;line-height:1.5;">Ask anything about how he's been doing — for a quick overview, exact quotes, where he struggled, or what a flag was about.</p>
       <div id="ask-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
       <div id="ask-thread" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
       <div style="display:flex;gap:8px;align-items:flex-end;">
-        <textarea id="ask-input" rows="1" placeholder="e.g. What exactly was the off-topic message?" onkeydown="handleAskKey(event)" oninput="autoResize(this)" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;padding:11px 14px;font-size:15px;color:var(--text);resize:none;min-height:42px;max-height:110px;line-height:1.4;font-family:sans-serif;"></textarea>
+        <textarea id="ask-input" rows="1" placeholder="e.g. How has Aden been doing this week?" onkeydown="handleAskKey(event)" oninput="autoResize(this)" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;padding:11px 14px;font-size:15px;color:var(--text);resize:none;min-height:42px;max-height:110px;line-height:1.4;font-family:sans-serif;"></textarea>
         <button id="ask-send-btn" onclick="askQuestion()" style="height:42px;padding:0 16px;border-radius:16px;background:var(--purple);color:white;font-size:14px;font-family:sans-serif;font-weight:600;flex-shrink:0;">Ask</button>
       </div>
     </div>
@@ -470,6 +473,10 @@ async function initApp() {
   document.getElementById('messages').innerHTML = '';
   appendWelcomeMessage();
   updateSessionStatus();
+  if (currentRole === 'parent') {
+    switchTab('summary');
+    loadCachedSummary();
+  }
 }
 
 function applyRole() {
@@ -585,6 +592,7 @@ async function sendMessage() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const reply = data.reply || data.message || data.text || JSON.stringify(data);
+    if (data.subject && typeof data.subject === 'string') currentSubject = data.subject;
     hideThinking(thinkId);
     const tutorMsg = { role: 'tutor', text: reply, time: new Date().toISOString() };
     sessionMessages.push(tutorMsg);
@@ -782,9 +790,12 @@ function onTimeframeChange() {
   document.getElementById('timeframe-label').textContent = label;
   document.getElementById('generate-btn-label').textContent = `✨ Generate summary (${label.toLowerCase()})`;
   updateStats();
+  renderAskChips();
+  // Timeframe changed — the shown summary and Q&A are for a different period now
   if (lastGeneratedTimeframe !== null && lastGeneratedTimeframe !== document.getElementById('timeframe-select').value) {
-    document.getElementById('ask-card').style.display = 'none';
     document.getElementById('ask-thread').innerHTML = '';
+    askHistory = [];
+    loadCachedSummary();
   }
 }
 
@@ -800,6 +811,56 @@ function updateStats() {
   pe.innerHTML = !Object.keys(sc).length
     ? `<p style="font-size:13px;color:var(--text3);font-family:sans-serif;">No sessions in this period.</p>`
     : Object.entries(sc).map(([sub, c]) => `<div class="progress-item"><div class="progress-label"><span>${sub}</span><span>${c} messages</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${Math.round(c/mx*100)}%"></div></div></div>`).join('');
+}
+
+function renderSummaryResult(summary, flags, savedAtIso, timeframeLabel) {
+  document.getElementById('ai-summary-text').innerHTML = renderSummaryMarkdown(summary);
+  document.getElementById('ai-summary-card').style.display = 'block';
+  const stamp = document.getElementById('summary-saved-at');
+  if (stamp) {
+    const when = savedAtIso ? new Date(savedAtIso) : null;
+    const ago = when ? relativeTime(when) : '';
+    stamp.textContent = ago ? `Updated ${ago}` : '';
+  }
+  document.getElementById('flag-list').innerHTML = (flags && flags.length)
+    ? flags.map(f => `<div class="flag-item"><span class="flag-icon">${f.icon||'⚠️'}</span><span class="flag-text">${escapeHtml(f.text)}</span></div>`).join('')
+    : `<div class="flag-item"><span class="flag-icon">✅</span><span class="flag-text" style="font-family:sans-serif;">No concerns this period. Aden is engaging well!</span></div>`;
+  lastFlags = flags || [];
+  renderAskChips();
+}
+
+function relativeTime(d) {
+  const s = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s/60)}m ago`;
+  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+  const days = Math.floor(s/86400);
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+async function loadCachedSummary() {
+  // Pull the most recent saved summary from Supabase and show it instantly (no Claude call)
+  const stamp = document.getElementById('summary-saved-at');
+  try {
+    const res = await fetch(
+      `${config.supabaseUrl}/rest/v1/summaries?order=created_at.desc&limit=1`,
+      { headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}` } }
+    );
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows.length) {
+        const r = rows[0];
+        let flags = [];
+        try { flags = typeof r.flags === 'string' ? JSON.parse(r.flags) : (r.flags || []); } catch(e) { flags = []; }
+        renderSummaryResult(r.content || '', flags, r.created_at, null);
+        return;
+      }
+    }
+  } catch(e) { console.warn('No cached summary yet', e); }
+  // Nothing saved yet — leave the AI card hidden, prompt via the button
+  renderAskChips();
 }
 
 async function generateSummary() {
@@ -826,16 +887,10 @@ async function generateSummary() {
     const data = await res.json();
     const summary = data.summary || data.reply || 'Summary generated.';
     const flags = data.flags || [];
-    document.getElementById('ai-summary-text').innerHTML = renderSummaryMarkdown(summary);
-    document.getElementById('ai-summary-card').style.display = 'block';
-    document.getElementById('flag-list').innerHTML = flags.length
-      ? flags.map(f => `<div class="flag-item"><span class="flag-icon">${f.icon||'⚠️'}</span><span class="flag-text">${escapeHtml(f.text)}</span></div>`).join('')
-      : `<div class="flag-item"><span class="flag-icon">✅</span><span class="flag-text" style="font-family:sans-serif;">No concerns this period. Aden is engaging well!</span></div>`;
+    renderSummaryResult(summary, flags, new Date().toISOString(), getTimeframeLabel());
     lastGeneratedTimeframe = document.getElementById('timeframe-select').value;
-    lastFlags = flags;
     document.getElementById('ask-thread').innerHTML = '';
-    renderAskChips();
-    document.getElementById('ask-card').style.display = 'block';
+    askHistory = [];
   } catch(e) {
     alert('Could not generate summary. Make sure the summary workflow is active in n8n.');
     console.error(e);
@@ -850,6 +905,7 @@ let lastFlags = [];
 let currentChips = [];
 
 const ASK_CHIPS = [
+  { icon: '📋', label: 'Summarise this week', q: "Give me a short, friendly overview of how Aden has been doing this week — what he worked on, how he engaged, and anything notable.", lead: true },
   { icon: '💚', label: 'How is he doing emotionally?', q: 'How is Aden doing emotionally? Is he confident, frustrated, anxious or happy based on how he communicated?' },
   { icon: '🧠', label: 'Is he really thinking?', q: 'Is Aden genuinely thinking and learning, or is he just guessing and trying to get answers out of the tutor?' },
   { icon: '📉', label: 'What did he struggle with?', q: 'What did Aden struggle with most this period? Be specific about topics or concepts.' },
