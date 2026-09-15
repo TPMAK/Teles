@@ -347,6 +347,7 @@
         <div class="stat-box"><div class="val" id="stat-messages">0</div><div class="lbl">Messages</div></div>
         <div class="stat-box"><div class="val" id="stat-subjects">0</div><div class="lbl">Subjects</div></div>
         <div class="stat-box"><div class="val" id="stat-photos">0</div><div class="lbl">Photos</div></div>
+        <div class="stat-box"><div class="val" id="stat-time">0m</div><div class="lbl">Time spent</div></div>
       </div>
     </div>
 
@@ -469,6 +470,16 @@ let photoBase64 = null;
 let allSessions = [];
 let isSending = false;
 
+/* ══════ TIME TRACKING — counts active (focused) seconds only ══════ */
+let sessionActiveSeconds = 0;
+let isTabActive = true;
+setInterval(() => {
+  if (isTabActive && currentRole === 'aden' && sessionMessages.length > 0) {
+    sessionActiveSeconds += 1;
+  }
+}, 1000);
+document.addEventListener('visibilitychange', () => { isTabActive = !document.hidden; });
+
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
 /* ══════ INIT ══════ */
@@ -526,6 +537,7 @@ function startNewSession() {
   currentSessionId = generateId();
   currentSubject = 'General';
   sessionMessages = [];
+  sessionActiveSeconds = 0;
   photoBase64 = null;
   removePhoto();
 
@@ -659,6 +671,7 @@ function saveCurrentSession() {
     id: currentSessionId, subject: currentSubject, date: new Date().toISOString(),
     messages: [...sessionMessages], photoCount: sessionMessages.filter(m => m.photo).length,
     title: sessionTitle(sessionMessages),
+    durationSeconds: sessionActiveSeconds,
   };
   const idx = allSessions.findIndex(s => s.id === currentSessionId);
   if (idx >= 0) allSessions[idx] = session; else allSessions.unshift(session);
@@ -682,6 +695,7 @@ async function loadSessions() {
         date: r.date,
         photoCount: r.photo_count || 0,
         title: r.title || '',
+        durationSeconds: r.duration_seconds || 0,
         messages: (() => {
           try { return typeof r.messages === 'string' ? JSON.parse(r.messages) : (r.messages || []); }
           catch(e) { return []; }
@@ -702,7 +716,7 @@ async function pushToSupabase(session) {
     await fetch(`${config.supabaseUrl}/rest/v1/sessions`, {
       method: 'POST',
       headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify({ id: session.id, subject: session.subject, date: session.date, messages: JSON.stringify(session.messages), photo_count: session.photoCount, message_count: session.messages.length, title: session.title })
+      body: JSON.stringify({ id: session.id, subject: session.subject, date: session.date, messages: JSON.stringify(session.messages), photo_count: session.photoCount, message_count: session.messages.length, title: session.title, duration_seconds: session.durationSeconds })
     });
   } catch(e) { console.warn('Supabase push failed:', e); }
 }
@@ -814,6 +828,7 @@ function updateStats() {
   document.getElementById('stat-messages').textContent = scope.reduce((a,s) => a + s.messages.length, 0);
   document.getElementById('stat-subjects').textContent = [...new Set(scope.map(s => s.subject))].length;
   document.getElementById('stat-photos').textContent = scope.reduce((a,s) => a + (s.photoCount||0), 0);
+  document.getElementById('stat-time').textContent = formatDuration(scope.reduce((a,s) => a + (s.durationSeconds||0), 0));
   const sc = {}; scope.forEach(s => { sc[s.subject] = (sc[s.subject]||0) + s.messages.length; });
   const mx = Math.max(...Object.values(sc), 1);
   const pe = document.getElementById('subject-progress');
@@ -1037,6 +1052,13 @@ function renderSummaryMarkdown(raw) {
   }
   closeList();
   return html;
+}
+function formatDuration(secs) {
+  if (secs < 60) return secs + 's';
+  const m = Math.round(secs / 60);
+  if (m < 60) return m + 'm';
+  const h = Math.floor(m / 60), rm = m % 60;
+  return rm ? `${h}h ${rm}m` : `${h}h`;
 }
 function formatTime(d) { return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 function formatDate(iso) { return new Date(iso).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }); }
