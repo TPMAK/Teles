@@ -186,9 +186,9 @@
   .history-header { display: flex; justify-content: space-between; align-items: center; }
   .history-header h2 { font-size: 17px; }
   .session-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
-  .session-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-  .session-card-title { font-size: 14px; font-weight: 700; }
-  .session-card-date { font-size: 11px; color: var(--text3); font-family: sans-serif; }
+  .session-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 10px; }
+  .session-card-title { font-size: 14px; font-weight: 700; min-width: 0; }
+  .session-card-date { font-size: 11px; color: var(--text3); font-family: sans-serif; flex-shrink: 0; white-space: nowrap; }
   .session-card-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 5px; }
   .badge { font-size: 11px; font-family: sans-serif; font-weight: 600; padding: 2px 9px; border-radius: 20px; background: var(--teal-light); color: var(--teal); }
   .badge.writing { background: var(--purple-light); color: var(--purple); }
@@ -236,6 +236,31 @@
   .loading-bar { height: 3px; background: var(--teal-light); border-radius: 2px; overflow: hidden; }
   .loading-bar-fill { height: 100%; background: var(--teal); border-radius: 2px; animation: load 1.8s ease-in-out infinite; }
   @keyframes load { 0%{width:0;margin-left:0} 50%{width:80%;margin-left:10%} 100%{width:0;margin-left:100%} }
+
+  /* PARENT SUB-TABS (tap to see one thing at a time) */
+  .psub { display: flex; gap: 4px; background: var(--surface2); border-radius: 12px; padding: 4px; margin-bottom: 4px; position: sticky; top: 0; z-index: 5; }
+  .psub-btn { flex: 1; font-size: 13px; font-family: sans-serif; font-weight: 600; padding: 9px 8px; border-radius: 9px; background: transparent; color: var(--text2); transition: all 0.15s; }
+  .psub-btn.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .psub-view { display: none; flex-direction: column; gap: 16px; }
+  .psub-view.active { display: flex; animation: fadeUp 0.2s ease; }
+
+  /* Attention banner */
+  .attention { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: var(--radius); }
+  .attention.warn { background: var(--red-light); border: 1px solid var(--teal-dim); }
+  .attention.calm { background: var(--surface); border: 1px solid var(--border); }
+  .attention-icon { font-size: 20px; flex-shrink: 0; line-height: 1.4; }
+  .attention-body { font-family: sans-serif; font-size: 14px; line-height: 1.55; }
+  .attention-body strong { display: block; margin-bottom: 2px; }
+  .attention-body .sub { color: var(--text2); font-size: 13px; }
+  .attention-link { display: inline-block; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--teal); background: none; padding: 0; }
+
+  /* Collapsible (tap to expand deeper detail) */
+  .collapse { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+  .collapse-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 18px; font-size: 14px; font-weight: 700; }
+  .collapse-head .chev { color: var(--text3); transition: transform 0.2s; font-size: 12px; }
+  .collapse.open .chev { transform: rotate(180deg); }
+  .collapse-body { display: none; padding: 0 18px 18px; }
+  .collapse.open .collapse-body { display: block; }
 
   /* OVERLAY */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: flex-end; justify-content: center; }
@@ -330,62 +355,103 @@
     <div id="session-list"></div>
   </div>
 
-  <!-- SUMMARY -->
+  <!-- SUMMARY (Parent) -->
   <div id="view-summary">
-    <div class="summary-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap;">
-        <h3 style="margin-bottom:0;"><span class="dot"></span><span id="timeframe-label">This week</span></h3>
-        <select id="timeframe-select" onchange="onTimeframeChange()" style="font-family:sans-serif;font-size:13px;padding:7px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface2);color:var(--text);">
-          <option value="7">This week</option>
-          <option value="14">Last 2 weeks</option>
-          <option value="30">This month</option>
-          <option value="all">All time</option>
-        </select>
-      </div>
-      <div class="stat-row">
-        <div class="stat-box"><div class="val" id="stat-sessions">0</div><div class="lbl">Sessions</div></div>
-        <div class="stat-box"><div class="val" id="stat-messages">0</div><div class="lbl">Messages</div></div>
-        <div class="stat-box"><div class="val" id="stat-subjects">0</div><div class="lbl">Subjects</div></div>
-        <div class="stat-box"><div class="val" id="stat-photos">0</div><div class="lbl">Photos</div></div>
-        <div class="stat-box"><div class="val" id="stat-time">0m</div><div class="lbl">Time spent</div></div>
-      </div>
+
+    <!-- Parent sub-tabs -->
+    <div class="psub">
+      <button class="psub-btn active" id="psub-overview" onclick="switchPSub('overview')">Overview</button>
+      <button class="psub-btn" id="psub-sessions" onclick="switchPSub('sessions')">Sessions</button>
+      <button class="psub-btn" id="psub-ask" onclick="switchPSub('ask')">Ask</button>
     </div>
 
-    <div class="summary-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap;">
-        <h3 style="margin-bottom:0;"><span class="dot" style="background:var(--purple)"></span>At a glance</h3>
-        <span id="summary-saved-at" style="font-size:11px;color:var(--text3);font-family:sans-serif;"></span>
-      </div>
-      <div class="flag-list" id="flag-list">
-        <div class="flag-item"><span class="flag-icon">ℹ️</span><span class="flag-text" style="font-family:sans-serif;">Tap refresh for this week's read on how Aden's doing.</span></div>
-      </div>
-      <div id="loading-bar-wrap" class="hidden" style="margin-top:12px;">
-        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
-        <p style="font-size:12px;color:var(--text3);font-family:sans-serif;margin-top:8px;">Reading his sessions...</p>
-      </div>
-      <button class="refresh-btn" onclick="generateSummary()"><span id="generate-btn-label">↻ Refresh</span></button>
+    <!-- Timeframe (applies to all sub-tabs) -->
+    <div style="display:flex;justify-content:flex-end;">
+      <select id="timeframe-select" onchange="onTimeframeChange()" style="font-family:sans-serif;font-size:13px;padding:7px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface2);color:var(--text);">
+        <option value="7">This week</option>
+        <option value="14">Last 2 weeks</option>
+        <option value="30">This month</option>
+        <option value="all">All time</option>
+      </select>
     </div>
 
-    <div class="summary-card">
-      <h3><span class="dot" style="background:var(--amber)"></span>Subject activity</h3>
-      <div class="progress-row" id="subject-progress">
-        <p style="font-size:13px;color:var(--text3);font-family:sans-serif;">Start some sessions to see activity here.</p>
-      </div>
-    </div>
+    <!-- ═══ OVERVIEW ═══ -->
+    <div class="psub-view active" id="pview-overview">
 
-    <div class="summary-card" id="ask-card">
-      <h3><span class="dot" style="background:var(--purple)"></span>Ask about Aden</h3>
-      <p style="font-size:13px;color:var(--text2);font-family:sans-serif;margin-bottom:12px;line-height:1.5;">Ask anything about how he's been doing — for a full write-up, exact quotes, where he struggled, or what a flag was about.</p>
-      <div id="ask-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
-      <div id="ask-thread" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
-      <div style="display:flex;gap:8px;align-items:flex-end;">
-        <textarea id="ask-input" rows="1" placeholder="e.g. How has Aden been doing this week?" onkeydown="handleAskKey(event)" oninput="autoResize(this)" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;padding:11px 14px;font-size:15px;color:var(--text);resize:none;min-height:42px;max-height:110px;line-height:1.4;font-family:sans-serif;"></textarea>
-        <button id="ask-send-btn" onclick="askQuestion()" style="height:42px;padding:0 16px;border-radius:16px;background:var(--purple);color:white;font-size:14px;font-family:sans-serif;font-weight:600;flex-shrink:0;">Ask</button>
+      <!-- Attention banner -->
+      <div id="attention-banner"></div>
+
+      <!-- Stats -->
+      <div class="summary-card">
+        <h3 style="margin-bottom:12px;"><span class="dot"></span><span id="timeframe-label">This week</span></h3>
+        <div class="stat-row">
+          <div class="stat-box"><div class="val" id="stat-sessions">0</div><div class="lbl">Sessions</div></div>
+          <div class="stat-box"><div class="val" id="stat-messages">0</div><div class="lbl">Messages</div></div>
+          <div class="stat-box"><div class="val" id="stat-subjects">0</div><div class="lbl">Subjects</div></div>
+          <div class="stat-box"><div class="val" id="stat-photos">0</div><div class="lbl">Photos</div></div>
+          <div class="stat-box"><div class="val" id="stat-time">0m</div><div class="lbl">Time spent</div></div>
+        </div>
       </div>
-    </div>
-  </div>
+
+      <!-- At a glance -->
+      <div class="summary-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap;">
+          <h3 style="margin-bottom:0;"><span class="dot" style="background:var(--purple)"></span>At a glance</h3>
+          <span id="summary-saved-at" style="font-size:11px;color:var(--text3);font-family:sans-serif;"></span>
+        </div>
+        <div class="flag-list" id="flag-list">
+          <div class="flag-item"><span class="flag-icon">ℹ️</span><span class="flag-text" style="font-family:sans-serif;">Tap refresh for this week's read on how Aden's doing.</span></div>
+        </div>
+        <div id="loading-bar-wrap" class="hidden" style="margin-top:12px;">
+          <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+          <p style="font-size:12px;color:var(--text3);font-family:sans-serif;margin-top:8px;">Reading his sessions...</p>
+        </div>
+        <button class="refresh-btn" onclick="generateSummary()"><span id="generate-btn-label">↻ Refresh</span></button>
       </div>
-    </div>
+
+      <!-- Subject activity (tap to expand) -->
+      <div class="collapse" id="col-subjects">
+        <div class="collapse-head" onclick="toggleCollapse('col-subjects')"><span>Subject activity</span><span class="chev">▾</span></div>
+        <div class="collapse-body">
+          <div class="progress-row" id="subject-progress">
+            <p style="font-size:13px;color:var(--text3);font-family:sans-serif;">Start some sessions to see activity here.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full write-up (tap to expand, appears once generated) -->
+      <div class="collapse hidden" id="col-written">
+        <div class="collapse-head" onclick="toggleCollapse('col-written')"><span>This period in full</span><span class="chev">▾</span></div>
+        <div class="collapse-body"><div id="ai-summary-text"></div></div>
+      </div>
+
+    </div><!-- /overview -->
+
+    <!-- ═══ SESSIONS ═══ -->
+    <div class="psub-view" id="pview-sessions">
+      <div class="summary-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h3 style="margin-bottom:0;"><span class="dot" style="background:var(--amber)"></span>Recent sessions</h3>
+          <span id="psess-count" style="font-size:11px;color:var(--text3);font-family:sans-serif;"></span>
+        </div>
+        <div id="parent-session-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+    </div><!-- /sessions -->
+
+    <!-- ═══ ASK ═══ -->
+    <div class="psub-view" id="pview-ask">
+      <div class="summary-card" id="ask-card">
+        <h3><span class="dot" style="background:var(--purple)"></span>Ask about Aden</h3>
+        <p style="font-size:13px;color:var(--text2);font-family:sans-serif;margin-bottom:12px;line-height:1.5;">Ask anything about how he's been doing — for a full write-up, exact quotes, where he struggled, or what a flag was about.</p>
+        <div id="ask-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
+        <div id="ask-thread" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+          <textarea id="ask-input" rows="1" placeholder="e.g. How has Aden been doing this week?" onkeydown="handleAskKey(event)" oninput="autoResize(this)" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;padding:11px 14px;font-size:15px;color:var(--text);resize:none;min-height:42px;max-height:110px;line-height:1.4;font-family:sans-serif;"></textarea>
+          <button id="ask-send-btn" onclick="askQuestion()" style="height:42px;padding:0 16px;border-radius:16px;background:var(--purple);color:white;font-size:14px;font-family:sans-serif;font-weight:600;flex-shrink:0;">Ask</button>
+        </div>
+      </div>
+    </div><!-- /ask -->
+
   </div>
 </div>
 
@@ -506,11 +572,68 @@ function applyRole() {
   badge.className = 'role-badge ' + (isParent ? 'parent' : 'student');
   document.getElementById('tab-summary').classList.toggle('hidden', !isParent);
   if (isParent) {
+    document.getElementById('session-status').textContent = "Aden's progress";
     document.getElementById('msg-input').disabled = true;
     document.getElementById('msg-input').placeholder = 'Log in as Aden to chat.';
     document.getElementById('send-btn').disabled = true;
     document.querySelector('.btn-photo').disabled = true;
     document.getElementById('new-session-btn').disabled = true;
+  }
+}
+
+/* ══════ PARENT SUB-TABS ══════ */
+let currentPSub = 'overview';
+function switchPSub(sub) {
+  currentPSub = sub;
+  ['overview','sessions','ask'].forEach(s => {
+    document.getElementById('psub-' + s).classList.toggle('active', s === sub);
+    document.getElementById('pview-' + s).classList.toggle('active', s === sub);
+  });
+  if (sub === 'sessions') renderParentSessions();
+  document.getElementById('view-summary').scrollTop = 0;
+}
+function toggleCollapse(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+/* ══════ PARENT SESSIONS LIST (reuses openSession overlay) ══════ */
+function renderParentSessions() {
+  const scope = sessionsInTimeframe();
+  const list = document.getElementById('parent-session-list');
+  const count = document.getElementById('psess-count');
+  count.textContent = scope.length ? `${scope.length} in ${getTimeframeLabel().toLowerCase()}` : '';
+  if (!scope.length) {
+    list.innerHTML = `<div class="empty-state"><div class="big">📚</div><p>No sessions in this period.<br>Try a wider timeframe.</p></div>`;
+    return;
+  }
+  list.innerHTML = scope.map(s => {
+    const preview = s.messages.find(m => m.role === 'tutor');
+    const pt = preview ? preview.text.slice(0,90) + (preview.text.length > 90 ? '…' : '') : '';
+    const bc = s.subject === 'Writing' ? 'writing' : s.subject === 'Science' ? 'science' : '';
+    const title = s.title || sessionTitle(s.messages);
+    return `<div class="session-card" onclick="openSession('${s.id}')">
+      <div class="session-card-header"><span class="session-card-title">${escapeHtml(title)}</span><span class="session-card-date">${formatDateTime(s.date)}</span></div>
+      <div class="session-card-meta"><span class="badge ${bc}">${s.subject}</span>${s.photoCount > 0 ? `<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">📸 ${s.photoCount}</span>` : ''}<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">${s.messages.length} messages</span></div>
+      ${pt ? `<div class="session-preview">${escapeHtml(pt)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* ══════ ATTENTION BANNER ══════ */
+function renderAttention() {
+  const el = document.getElementById('attention-banner');
+  if (!el) return;
+  const concern = (lastFlags || []).find(f => (f.icon || '') === '⚠️');
+  const scope = sessionsInTimeframe();
+  if (concern) {
+    el.className = 'attention warn';
+    el.innerHTML = `<span class="attention-icon">⚠️</span><div class="attention-body"><strong>Worth a look</strong><span class="sub">${escapeHtml(concern.text)}</span><br><button class="attention-link" onclick="switchPSub('ask');askQuestion('You flagged a concern this period. What exactly was it? Quote the actual message or moment.')">Ask what happened →</button></div>`;
+  } else if (scope.length) {
+    el.className = 'attention calm';
+    el.innerHTML = `<span class="attention-icon">✅</span><div class="attention-body"><strong>Nothing needs your attention</strong><span class="sub">Aden has been engaging well this period.</span></div>`;
+  } else {
+    el.className = 'attention calm';
+    el.innerHTML = `<span class="attention-icon">📚</span><div class="attention-body"><strong>No sessions yet in this period</strong><span class="sub">Pick a wider timeframe, or check back after Aden's next session.</span></div>`;
   }
 }
 
@@ -814,6 +937,8 @@ function onTimeframeChange() {
   document.getElementById('generate-btn-label').textContent = `↻ Refresh (${label.toLowerCase()})`;
   updateStats();
   renderAskChips();
+  renderAttention();
+  if (currentPSub === 'sessions') renderParentSessions();
   // Timeframe changed — the shown summary and Q&A are for a different period now
   if (lastGeneratedTimeframe !== null && lastGeneratedTimeframe !== document.getElementById('timeframe-select').value) {
     document.getElementById('ask-thread').innerHTML = '';
@@ -849,6 +974,7 @@ function renderSummaryResult(flags, savedAtIso) {
     : `<div class="flag-item"><span class="flag-icon">✅</span><span class="flag-text" style="font-family:sans-serif;">No concerns this period. Aden is engaging well!</span></div>`;
   lastFlags = flags || [];
   renderAskChips();
+  renderAttention();
 }
 
 function relativeTime(d) {
@@ -877,6 +1003,10 @@ async function loadCachedSummary() {
         let flags = [];
         try { flags = typeof r.flags === 'string' ? JSON.parse(r.flags) : (r.flags || []); } catch(e) { flags = []; }
         renderSummaryResult(flags, r.created_at);
+        if (r.content) {
+          document.getElementById('ai-summary-text').innerHTML = renderSummaryMarkdown(r.content);
+          document.getElementById('col-written').classList.remove('hidden');
+        }
         return;
       }
     }
@@ -909,6 +1039,10 @@ async function generateSummary() {
     const data = await res.json();
     const flags = data.flags || [];
     renderSummaryResult(flags, new Date().toISOString());
+    if (data.summary) {
+      document.getElementById('ai-summary-text').innerHTML = renderSummaryMarkdown(data.summary);
+      document.getElementById('col-written').classList.remove('hidden');
+    }
     lastGeneratedTimeframe = document.getElementById('timeframe-select').value;
   } catch(e) {
     alert('Could not refresh. Make sure the summary workflow is active in n8n.');
@@ -1014,6 +1148,7 @@ async function askQuestion(presetQ) {
 
 /* ══════ HELPERS ══════ */
 function updateSessionStatus() {
+  if (currentRole === 'parent') return;
   const c = sessionMessages.length;
   document.getElementById('session-status').textContent = c === 0 ? 'Ready to learn' : `${Math.ceil(c/2)} question${Math.ceil(c/2)!==1?'s':''} explored`;
   document.getElementById('session-count').textContent = c > 0 ? `${Math.ceil(c/2)} exchange${Math.ceil(c/2)!==1?'s':''}` : '';
