@@ -227,6 +227,9 @@
   .ask-chip:hover { border-color: var(--purple); }
   .ask-chip:disabled { opacity: 0.45; }
   .generate-btn { background: var(--teal); color: white; font-size: 15px; font-family: sans-serif; font-weight: 600; padding: 14px 24px; border-radius: var(--radius-sm); width: 100%; }
+  .refresh-btn { margin-top: 14px; background: var(--surface2); color: var(--text2); font-size: 13px; font-family: sans-serif; font-weight: 600; padding: 9px 16px; border-radius: 20px; border: 1px solid var(--border); }
+  .refresh-btn:active { opacity: 0.7; }
+  .refresh-btn:disabled { opacity: 0.45; }
   .loading-bar { height: 3px; background: var(--teal-light); border-radius: 2px; overflow: hidden; }
   .loading-bar-fill { height: 100%; background: var(--teal); border-radius: 2px; animation: load 1.8s ease-in-out infinite; }
   @keyframes load { 0%{width:0;margin-left:0} 50%{width:80%;margin-left:10%} 100%{width:0;margin-left:100%} }
@@ -340,40 +343,41 @@
         <div class="stat-box"><div class="val" id="stat-subjects">0</div><div class="lbl">Subjects</div></div>
         <div class="stat-box"><div class="val" id="stat-photos">0</div><div class="lbl">Photos</div></div>
       </div>
-      <div id="loading-bar-wrap" class="hidden">
-        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
-        <p style="font-size:12px;color:var(--text3);font-family:sans-serif;margin-top:8px;">Generating summary...</p>
-      </div>
     </div>
+
+    <div class="summary-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap;">
+        <h3 style="margin-bottom:0;"><span class="dot" style="background:var(--purple)"></span>At a glance</h3>
+        <span id="summary-saved-at" style="font-size:11px;color:var(--text3);font-family:sans-serif;"></span>
+      </div>
+      <div class="flag-list" id="flag-list">
+        <div class="flag-item"><span class="flag-icon">ℹ️</span><span class="flag-text" style="font-family:sans-serif;">Tap refresh for this week's read on how Aden's doing.</span></div>
+      </div>
+      <div id="loading-bar-wrap" class="hidden" style="margin-top:12px;">
+        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+        <p style="font-size:12px;color:var(--text3);font-family:sans-serif;margin-top:8px;">Reading his sessions...</p>
+      </div>
+      <button class="refresh-btn" onclick="generateSummary()"><span id="generate-btn-label">↻ Refresh</span></button>
+    </div>
+
     <div class="summary-card">
       <h3><span class="dot" style="background:var(--amber)"></span>Subject activity</h3>
       <div class="progress-row" id="subject-progress">
         <p style="font-size:13px;color:var(--text3);font-family:sans-serif;">Start some sessions to see activity here.</p>
       </div>
     </div>
-    <div class="summary-card" id="ai-summary-card" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap;">
-        <h3 style="margin-bottom:0;"><span class="dot" style="background:var(--purple)"></span>AI summary</h3>
-        <span id="summary-saved-at" style="font-size:11px;color:var(--text3);font-family:sans-serif;"></span>
-      </div>
-      <div id="ai-summary-text" style="font-size:15.5px;line-height:1.75;color:var(--text);font-family:sans-serif;"></div>
-    </div>
-    <div class="summary-card">
-      <h3><span class="dot" style="background:var(--red)"></span>Things to be aware of</h3>
-      <div class="flag-list" id="flag-list">
-        <div class="flag-item"><span class="flag-icon">ℹ️</span><span class="flag-text" style="font-family:sans-serif;">Generate a summary to see flags.</span></div>
-      </div>
-    </div>
-    <button class="generate-btn" onclick="generateSummary()"><span id="generate-btn-label">✨ Generate summary</span></button>
 
     <div class="summary-card" id="ask-card">
       <h3><span class="dot" style="background:var(--purple)"></span>Ask about Aden</h3>
-      <p style="font-size:13px;color:var(--text2);font-family:sans-serif;margin-bottom:12px;line-height:1.5;">Ask anything about how he's been doing — for a quick overview, exact quotes, where he struggled, or what a flag was about.</p>
+      <p style="font-size:13px;color:var(--text2);font-family:sans-serif;margin-bottom:12px;line-height:1.5;">Ask anything about how he's been doing — for a full write-up, exact quotes, where he struggled, or what a flag was about.</p>
       <div id="ask-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
       <div id="ask-thread" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
       <div style="display:flex;gap:8px;align-items:flex-end;">
         <textarea id="ask-input" rows="1" placeholder="e.g. How has Aden been doing this week?" onkeydown="handleAskKey(event)" oninput="autoResize(this)" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;padding:11px 14px;font-size:15px;color:var(--text);resize:none;min-height:42px;max-height:110px;line-height:1.4;font-family:sans-serif;"></textarea>
         <button id="ask-send-btn" onclick="askQuestion()" style="height:42px;padding:0 16px;border-radius:16px;background:var(--purple);color:white;font-size:14px;font-family:sans-serif;font-weight:600;flex-shrink:0;">Ask</button>
+      </div>
+    </div>
+  </div>
       </div>
     </div>
   </div>
@@ -788,7 +792,7 @@ function sessionsInTimeframe() {
 function onTimeframeChange() {
   const label = getTimeframeLabel();
   document.getElementById('timeframe-label').textContent = label;
-  document.getElementById('generate-btn-label').textContent = `✨ Generate summary (${label.toLowerCase()})`;
+  document.getElementById('generate-btn-label').textContent = `↻ Refresh (${label.toLowerCase()})`;
   updateStats();
   renderAskChips();
   // Timeframe changed — the shown summary and Q&A are for a different period now
@@ -813,9 +817,7 @@ function updateStats() {
     : Object.entries(sc).map(([sub, c]) => `<div class="progress-item"><div class="progress-label"><span>${sub}</span><span>${c} messages</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${Math.round(c/mx*100)}%"></div></div></div>`).join('');
 }
 
-function renderSummaryResult(summary, flags, savedAtIso, timeframeLabel) {
-  document.getElementById('ai-summary-text').innerHTML = renderSummaryMarkdown(summary);
-  document.getElementById('ai-summary-card').style.display = 'block';
+function renderSummaryResult(flags, savedAtIso) {
   const stamp = document.getElementById('summary-saved-at');
   if (stamp) {
     const when = savedAtIso ? new Date(savedAtIso) : null;
@@ -854,7 +856,7 @@ async function loadCachedSummary() {
         const r = rows[0];
         let flags = [];
         try { flags = typeof r.flags === 'string' ? JSON.parse(r.flags) : (r.flags || []); } catch(e) { flags = []; }
-        renderSummaryResult(r.content || '', flags, r.created_at, null);
+        renderSummaryResult(flags, r.created_at);
         return;
       }
     }
@@ -870,7 +872,7 @@ async function generateSummary() {
     return;
   }
   document.getElementById('loading-bar-wrap').classList.remove('hidden');
-  document.querySelector('.generate-btn').disabled = true;
+  document.querySelector('.refresh-btn').disabled = true;
   try {
     const res = await fetch(config.summaryWebhook, {
       method: 'POST',
@@ -885,18 +887,15 @@ async function generateSummary() {
       })
     });
     const data = await res.json();
-    const summary = data.summary || data.reply || 'Summary generated.';
     const flags = data.flags || [];
-    renderSummaryResult(summary, flags, new Date().toISOString(), getTimeframeLabel());
+    renderSummaryResult(flags, new Date().toISOString());
     lastGeneratedTimeframe = document.getElementById('timeframe-select').value;
-    document.getElementById('ask-thread').innerHTML = '';
-    askHistory = [];
   } catch(e) {
-    alert('Could not generate summary. Make sure the summary workflow is active in n8n.');
+    alert('Could not refresh. Make sure the summary workflow is active in n8n.');
     console.error(e);
   }
   document.getElementById('loading-bar-wrap').classList.add('hidden');
-  document.querySelector('.generate-btn').disabled = false;
+  document.querySelector('.refresh-btn').disabled = false;
 }
 
 /* ══════ PARENT Q&A ══════ */
