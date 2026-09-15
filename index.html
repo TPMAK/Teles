@@ -101,21 +101,24 @@
 
   /* HEADER */
   .header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 18px 20px 14px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    padding: 14px 16px 10px; background: var(--surface); border-bottom: 1px solid var(--border);
     flex-shrink: 0; gap: 10px;
   }
+  .header-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .header-brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .header-titles { min-width: 0; }
+  .header-title-row { display: flex; align-items: center; gap: 7px; }
   .header-icon { width: 38px; height: 38px; background: var(--teal-light); border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 3px; flex-shrink: 0; }
   .header-icon svg { width: 100%; height: 100%; }
-  .header-title { font-size: 16px; font-weight: 700; color: var(--text); }
-  .header-sub { font-size: 11px; color: var(--text3); font-family: sans-serif; }
-  .header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-  .header-tabs { display: flex; gap: 2px; background: var(--surface2); border-radius: 8px; padding: 3px; }
-  .tab-btn { font-size: 12px; font-family: sans-serif; padding: 5px 10px; border-radius: 6px; background: transparent; color: var(--text2); font-weight: 500; }
+  .header-title { font-size: 16px; font-weight: 700; color: var(--text); white-space: nowrap; }
+  .header-sub { font-size: 11px; color: var(--text3); font-family: sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header-tabs { display: flex; gap: 3px; background: var(--surface2); border-radius: 10px; padding: 3px; width: 100%; }
+  .tab-btn { flex: 1; text-align: center; font-size: 13px; font-family: sans-serif; padding: 8px 10px; border-radius: 8px; background: transparent; color: var(--text2); font-weight: 500; }
+  .tab-btn.hidden { display: none; }
   .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
-  .logout-btn { font-size: 12px; font-family: sans-serif; padding: 6px 10px; border-radius: var(--radius-sm); background: var(--surface2); border: 1px solid var(--border); color: var(--text3); }
-  .role-badge { font-size: 10px; font-family: sans-serif; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+  .logout-btn { font-size: 12px; font-family: sans-serif; padding: 6px 12px; border-radius: var(--radius-sm); background: var(--surface2); border: 1px solid var(--border); color: var(--text3); flex-shrink: 0; }
+  .role-badge { font-size: 10px; font-family: sans-serif; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
   .role-badge.parent { background: var(--purple-light); color: var(--purple); }
   .role-badge.student { background: var(--teal-light); color: var(--teal); }
 
@@ -272,21 +275,23 @@
 <!-- APP -->
 <div class="app" id="main-app" style="display:none">
   <header class="header">
-    <div class="header-brand">
-      <div class="header-icon" id="header-mascot"></div>
-      <div>
-        <div class="header-title">StockFish</div>
-        <div class="header-sub" id="session-status">Ready to learn</div>
-      </div>
-    </div>
-    <div class="header-right">
-      <span class="role-badge" id="role-badge"></span>
-      <div class="header-tabs">
-        <button class="tab-btn active" onclick="switchTab('chat')" id="tab-chat">Chat</button>
-        <button class="tab-btn" onclick="switchTab('history')" id="tab-history">History</button>
-        <button class="tab-btn hidden" onclick="switchTab('summary')" id="tab-summary">Summary</button>
+    <div class="header-top">
+      <div class="header-brand">
+        <div class="header-icon" id="header-mascot"></div>
+        <div class="header-titles">
+          <div class="header-title-row">
+            <span class="header-title">StockFish</span>
+            <span class="role-badge" id="role-badge"></span>
+          </div>
+          <div class="header-sub" id="session-status">Ready to learn</div>
+        </div>
       </div>
       <button class="logout-btn" onclick="logout()">Out</button>
+    </div>
+    <div class="header-tabs">
+      <button class="tab-btn active" onclick="switchTab('chat')" id="tab-chat">Chat</button>
+      <button class="tab-btn" onclick="switchTab('history')" id="tab-history">History</button>
+      <button class="tab-btn hidden" onclick="switchTab('summary')" id="tab-summary">Summary</button>
     </div>
   </header>
 
