@@ -222,6 +222,10 @@
   #ai-summary-text .sum-ul li::before { content: ''; position: absolute; left: 3px; top: 10px; width: 5px; height: 5px; border-radius: 50%; background: var(--teal); }
   #ai-summary-text strong { color: var(--text); font-weight: 700; }
   #ai-summary-text .sum-hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+  .ask-chip { font-family: sans-serif; font-size: 13px; padding: 8px 13px; border-radius: 18px; background: var(--purple-light); color: var(--purple); border: 1px solid transparent; font-weight: 500; transition: all 0.15s; line-height: 1.2; }
+  .ask-chip:active { transform: scale(0.96); }
+  .ask-chip:hover { border-color: var(--purple); }
+  .ask-chip:disabled { opacity: 0.45; }
   .generate-btn { background: var(--teal); color: white; font-size: 15px; font-family: sans-serif; font-weight: 600; padding: 14px 24px; border-radius: var(--radius-sm); width: 100%; }
   .loading-bar { height: 3px; background: var(--teal-light); border-radius: 2px; overflow: hidden; }
   .loading-bar-fill { height: 100%; background: var(--teal); border-radius: 2px; animation: load 1.8s ease-in-out infinite; }
@@ -362,6 +366,7 @@
     <div class="summary-card" id="ask-card" style="display:none">
       <h3><span class="dot" style="background:var(--purple)"></span>Ask about this period</h3>
       <p style="font-size:13px;color:var(--text2);font-family:sans-serif;margin-bottom:12px;line-height:1.5;">Dig deeper into anything from the sessions above — ask for exact quotes, where he struggled, or what a flag was about.</p>
+      <div id="ask-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
       <div id="ask-thread" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
       <div style="display:flex;gap:8px;align-items:flex-end;">
         <textarea id="ask-input" rows="1" placeholder="e.g. What exactly was the off-topic message?" onkeydown="handleAskKey(event)" oninput="autoResize(this)" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;padding:11px 14px;font-size:15px;color:var(--text);resize:none;min-height:42px;max-height:110px;line-height:1.4;font-family:sans-serif;"></textarea>
@@ -827,7 +832,9 @@ async function generateSummary() {
       ? flags.map(f => `<div class="flag-item"><span class="flag-icon">${f.icon||'⚠️'}</span><span class="flag-text">${escapeHtml(f.text)}</span></div>`).join('')
       : `<div class="flag-item"><span class="flag-icon">✅</span><span class="flag-text" style="font-family:sans-serif;">No concerns this period. Aden is engaging well!</span></div>`;
     lastGeneratedTimeframe = document.getElementById('timeframe-select').value;
+    lastFlags = flags;
     document.getElementById('ask-thread').innerHTML = '';
+    renderAskChips();
     document.getElementById('ask-card').style.display = 'block';
   } catch(e) {
     alert('Could not generate summary. Make sure the summary workflow is active in n8n.');
@@ -839,6 +846,38 @@ async function generateSummary() {
 
 /* ══════ PARENT Q&A ══════ */
 let askHistory = [];
+let lastFlags = [];
+let currentChips = [];
+
+const ASK_CHIPS = [
+  { icon: '💚', label: 'How is he doing emotionally?', q: 'How is Aden doing emotionally? Is he confident, frustrated, anxious or happy based on how he communicated?' },
+  { icon: '🧠', label: 'Is he really thinking?', q: 'Is Aden genuinely thinking and learning, or is he just guessing and trying to get answers out of the tutor?' },
+  { icon: '📉', label: 'What did he struggle with?', q: 'What did Aden struggle with most this period? Be specific about topics or concepts.' },
+  { icon: '🙋', label: 'One thing I can do to help', q: "What is the single most useful thing I can do at home this week to support Aden's learning?" },
+  { icon: '🔍', label: 'Anything I should be aware of', q: 'Is there anything I should be aware of — anything concerning, off-topic, or worth a gentle check-in? Quote it exactly if so.' },
+  { icon: '⏱️', label: 'Is he using it a healthy amount?', q: 'Is Aden using this tutor a healthy amount, or leaning on it too heavily? What does his usage pattern look like?' },
+];
+
+function renderAskChips() {
+  const wrap = document.getElementById('ask-chips');
+  if (!wrap) return;
+  let chips = [...ASK_CHIPS];
+  // If a concern was flagged this period, surface a direct chip about it first
+  const hasConcern = (lastFlags || []).some(f => (f.icon || '') === '⚠️');
+  if (hasConcern) {
+    chips.unshift({ icon: '⚠️', label: 'What did you flag?', q: 'You flagged a concern this period. What exactly was it? Quote the actual message or moment.' });
+  }
+  currentChips = chips;
+  wrap.style.display = 'flex';
+  wrap.innerHTML = chips.map((c, i) =>
+    `<button class="ask-chip" onclick="sendChip(${i})">${c.icon} ${escapeHtml(c.label)}</button>`
+  ).join('');
+}
+
+function sendChip(i) {
+  const c = currentChips[i];
+  if (c) askQuestion(c.q);
+}
 
 function handleAskKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askQuestion(); } }
 
@@ -854,13 +893,17 @@ function appendAskMsg(role, text) {
   return div;
 }
 
-async function askQuestion() {
+async function askQuestion(presetQ) {
   const input = document.getElementById('ask-input');
-  const q = input.value.trim();
+  const q = (presetQ != null ? presetQ : input.value).trim();
   if (!q) return;
   const btn = document.getElementById('ask-send-btn');
-  input.value = ''; input.style.height = '';
+  if (presetQ == null) { input.value = ''; input.style.height = ''; }
   btn.disabled = true;
+
+  // Chips are training wheels — hide them once the parent has asked something
+  const chipWrap = document.getElementById('ask-chips');
+  if (chipWrap) chipWrap.style.display = 'none';
 
   appendAskMsg('parent', q);
   const thinking = appendAskMsg('assistant', '…');
