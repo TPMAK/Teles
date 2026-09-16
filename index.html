@@ -522,12 +522,11 @@ function doLogin() {
   }
 }
 function logout() {
-  currentRole = null; sessionMessages = []; allSessions = [];
-  document.getElementById('main-app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('login-pw').value = '';
-  document.getElementById('login-error').textContent = '';
-  selectWho('aden');
+  // Full page reload on logout. This is a deliberate privacy boundary:
+  // it wipes ALL rendered content and state (chat, parent summary, sessions,
+  // chips, flags, ask thread) so nothing from one account can ever be seen
+  // by the other. Do not replace this with a manual teardown.
+  location.reload();
 }
 
 /* ══════ STATE ══════ */
@@ -640,7 +639,7 @@ function renderAttention() {
 }
 
 /* ══════ TABS ══════ */
-function switchTab(tab) {
+async function switchTab(tab) {
   ['chat','history','summary'].forEach(t => {
     const btn = document.getElementById('tab-' + t);
     if (btn) btn.classList.toggle('active', t === tab);
@@ -649,6 +648,9 @@ function switchTab(tab) {
   document.getElementById('view-history').style.display = tab === 'history' ? 'flex' : 'none';
   document.getElementById('view-summary').style.display = tab === 'summary' ? 'flex' : 'none';
   document.getElementById('action-bar').style.display = tab === 'chat' ? 'flex' : 'none';
+  // Always pull fresh session data from Supabase when opening a data view,
+  // so the parent never sees stale numbers or a missing recent session.
+  if (tab === 'history' || tab === 'summary') await loadSessions();
   if (tab === 'history') renderHistory();
   if (tab === 'summary') onTimeframeChange();
 }
