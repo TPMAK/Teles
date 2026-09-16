@@ -242,7 +242,11 @@
   @keyframes load { 0%{width:0;margin-left:0} 50%{width:80%;margin-left:10%} 100%{width:0;margin-left:100%} }
 
   /* PARENT SUB-TABS (tap to see one thing at a time) */
-  .psub { display: flex; gap: 4px; background: var(--surface2); border-radius: 12px; padding: 4px; margin-bottom: 4px; position: sticky; top: 0; z-index: 5; }
+  /* FIX: sticky strip is now fully opaque edge-to-edge (background: var(--bg)),
+     spans the padded #view-summary width via negative margins, and sits above
+     scrolling content (z-index 10) so nothing bleeds through underneath it. */
+  .psub { position: sticky; top: 0; z-index: 10; background: var(--bg); margin: -20px -20px 8px; padding: 12px 20px 4px; }
+  .psub-inner { display: flex; gap: 4px; background: var(--surface2); border-radius: 12px; padding: 4px; }
   .psub-btn { flex: 1; font-size: 13px; font-family: sans-serif; font-weight: 600; padding: 9px 8px; border-radius: 9px; background: transparent; color: var(--text2); transition: all 0.15s; }
   .psub-btn.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
   .psub-view { display: none; flex-direction: column; gap: 16px; }
@@ -364,9 +368,11 @@
 
     <!-- Parent sub-tabs -->
     <div class="psub">
-      <button type="button" class="psub-btn active" id="psub-overview" onclick="switchPSub('overview')">Overview</button>
-      <button type="button" class="psub-btn" id="psub-sessions" onclick="switchPSub('sessions')">Sessions</button>
-      <button type="button" class="psub-btn" id="psub-ask" onclick="switchPSub('ask')">Ask</button>
+      <div class="psub-inner">
+        <button type="button" class="psub-btn active" id="psub-overview" onclick="switchPSub('overview')">Overview</button>
+        <button type="button" class="psub-btn" id="psub-sessions" onclick="switchPSub('sessions')">Sessions</button>
+        <button type="button" class="psub-btn" id="psub-ask" onclick="switchPSub('ask')">Ask</button>
+      </div>
     </div>
 
     <!-- Timeframe (applies to all sub-tabs) -->
@@ -516,6 +522,10 @@ function doLogin() {
   const pw = document.getElementById('login-pw').value;
   if (pw === PASSWORDS[selectedWho]) {
     currentRole = selectedWho;
+    // FIX: remember the active role so a browser refresh doesn't dump us back
+    // to the login screen. Clears when the tab closes or on logout. Stores the
+    // role only, never the password — a convenience, not a security control.
+    try { sessionStorage.setItem('sf_role', currentRole); } catch(e) {}
     document.getElementById('login-screen').style.display = 'none';
     initApp();
   } else {
@@ -524,6 +534,8 @@ function doLogin() {
   }
 }
 function logout() {
+  // Clear the remembered role so a reload lands on login, not straight back in.
+  try { sessionStorage.removeItem('sf_role'); } catch(e) {}
   // Full page reload on logout. This is a deliberate privacy boundary:
   // it wipes ALL rendered content and state (chat, parent summary, sessions,
   // chips, flags, ask thread) so nothing from one account can ever be seen
@@ -1215,9 +1227,19 @@ function formatTime(d) { return d.toLocaleTimeString([], { hour: '2-digit', minu
 function formatDate(iso) { return new Date(iso).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }); }
 function formatDateTime(iso) { return formatDate(iso) + ' · ' + formatTime(new Date(iso)); }
 
-/* Populate the login mascot as soon as the page loads */
+/* Populate the login mascot as soon as the page loads, and auto-resume the
+   session if a role is remembered (survives browser refresh; cleared on logout
+   or tab close). */
 document.addEventListener('DOMContentLoaded', () => {
   const lm = document.getElementById('login-mascot'); if (lm) lm.innerHTML = MASCOT_SVG;
+  try {
+    const saved = sessionStorage.getItem('sf_role');
+    if (saved && PASSWORDS[saved]) {
+      currentRole = saved;
+      document.getElementById('login-screen').style.display = 'none';
+      initApp();
+    }
+  } catch(e) {}
 });
 </script>
 </body>
