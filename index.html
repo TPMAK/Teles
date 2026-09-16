@@ -190,11 +190,13 @@
   .session-card-title { font-size: 14px; font-weight: 700; min-width: 0; }
   .session-card-date { font-size: 11px; color: var(--text3); font-family: sans-serif; flex-shrink: 0; white-space: nowrap; }
   .session-card-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 5px; }
-  .badge { font-size: 11px; font-family: sans-serif; font-weight: 600; padding: 2px 9px; border-radius: 20px; background: var(--teal-light); color: var(--teal); }
-  .badge.writing { background: var(--purple-light); color: var(--purple); }
-  .badge.science { background: var(--amber-light); color: var(--amber); }
-  .badge.wellbeing { background: var(--red-light); color: var(--red); }
-  .badge.hobbies { background: var(--amber-light); color: var(--amber); }
+  .badge { font-size: 11px; font-family: sans-serif; font-weight: 600; padding: 2px 9px; border-radius: 20px; background: #D3D1C7; color: #444441; }
+  .badge.maths { background: #B5D4F4; color: #0C447C; }
+  .badge.reading { background: #C0DD97; color: #27500A; }
+  .badge.writing { background: #CECBF6; color: #3C3489; }
+  .badge.science { background: #FAC775; color: #633806; }
+  .badge.wellbeing { background: #F4C0D1; color: #72243E; }
+  .badge.hobbies { background: #F5C4B3; color: #712B13; }
   .session-preview { font-size: 13px; color: var(--text2); line-height: 1.5; font-family: sans-serif; }
   .session-msg-count { font-size: 11px; color: var(--text3); font-family: sans-serif; margin-top: 6px; }
   .empty-state { text-align: center; padding: 50px 20px; color: var(--text2); }
@@ -610,7 +612,7 @@ function renderParentSessions() {
   list.innerHTML = scope.map(s => {
     const preview = s.messages.find(m => m.role === 'tutor');
     const pt = preview ? preview.text.slice(0,90) + (preview.text.length > 90 ? '…' : '') : '';
-    const bc = s.subject === 'Writing' ? 'writing' : s.subject === 'Science' ? 'science' : s.subject === 'Wellbeing' ? 'wellbeing' : s.subject === 'Hobbies' ? 'hobbies' : '';
+    const bc = s.subject === 'Maths' ? 'maths' : s.subject === 'Reading' ? 'reading' : s.subject === 'Writing' ? 'writing' : s.subject === 'Science' ? 'science' : s.subject === 'Wellbeing' ? 'wellbeing' : s.subject === 'Hobbies' ? 'hobbies' : '';
     const title = s.title || sessionTitle(s.messages);
     return `<div class="session-card" onclick="openSession('${s.id}')">
       <div class="session-card-header"><span class="session-card-title">${escapeHtml(title)}</span><span class="session-card-date">${formatDateTime(s.date)}</span></div>
@@ -860,7 +862,7 @@ function renderHistory() {
   list.innerHTML = allSessions.map(s => {
     const preview = s.messages.find(m => m.role === 'tutor');
     const pt = preview ? preview.text.slice(0,100) + (preview.text.length > 100 ? '…' : '') : '';
-    const bc = s.subject === 'Writing' ? 'writing' : s.subject === 'Science' ? 'science' : s.subject === 'Wellbeing' ? 'wellbeing' : s.subject === 'Hobbies' ? 'hobbies' : '';
+    const bc = s.subject === 'Maths' ? 'maths' : s.subject === 'Reading' ? 'reading' : s.subject === 'Writing' ? 'writing' : s.subject === 'Science' ? 'science' : s.subject === 'Wellbeing' ? 'wellbeing' : s.subject === 'Hobbies' ? 'hobbies' : '';
     const title = s.title || sessionTitle(s.messages);
     return `<div class="session-card" onclick="openSession('${s.id}')">
       <div class="session-card-header"><span class="session-card-title">${escapeHtml(title)}</span><span class="session-card-date">${formatDateTime(s.date)}</span></div>
