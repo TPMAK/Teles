@@ -285,10 +285,10 @@
     <h1>StockFish</h1>
     <p class="login-sub">Who are you?</p>
     <div class="login-who">
-      <button class="who-btn selected" id="who-aden" onclick="selectWho('aden')">
+      <button type="button" class="who-btn selected" id="who-aden" onclick="selectWho('aden')">
         <span class="who-icon">🎒</span>Aden
       </button>
-      <button class="who-btn" id="who-parent" onclick="selectWho('parent')">
+      <button type="button" class="who-btn" id="who-parent" onclick="selectWho('parent')">
         <span class="who-icon">👨‍👩‍👦</span>Parent
       </button>
     </div>
@@ -297,7 +297,7 @@
       <input type="password" id="login-pw" placeholder="Type your password..." onkeydown="if(event.key==='Enter') doLogin()" autocomplete="current-password">
     </div>
     <div class="login-error" id="login-error"></div>
-    <button class="login-btn" onclick="doLogin()">Let's go →</button>
+    <button type="button" class="login-btn" onclick="doLogin()">Let's go →</button>
   </div>
 </div>
 
@@ -315,17 +315,17 @@
           <div class="header-sub" id="session-status">Ready to learn</div>
         </div>
       </div>
-      <button class="logout-btn" onclick="logout()">Out</button>
+      <button type="button" class="logout-btn" onclick="logout()">Out</button>
     </div>
     <div class="header-tabs">
-      <button class="tab-btn active" onclick="switchTab('chat')" id="tab-chat">Chat</button>
-      <button class="tab-btn" onclick="switchTab('history')" id="tab-history">History</button>
-      <button class="tab-btn hidden" onclick="switchTab('summary')" id="tab-summary">Summary</button>
+      <button type="button" class="tab-btn active" onclick="switchTab('chat')" id="tab-chat">Chat</button>
+      <button type="button" class="tab-btn" onclick="switchTab('history')" id="tab-history">History</button>
+      <button type="button" class="tab-btn hidden" onclick="switchTab('summary')" id="tab-summary">Summary</button>
     </div>
   </header>
 
   <div class="action-bar" id="action-bar">
-    <button class="new-session-btn" id="new-session-btn" onclick="startNewSession()">✦ New session</button>
+    <button type="button" class="new-session-btn" id="new-session-btn" onclick="startNewSession()">✦ New session</button>
     <span class="session-label" id="session-count"></span>
   </div>
 
@@ -338,13 +338,13 @@
         <div class="photo-remove" onclick="removePhoto()">✕</div>
       </div>
       <div class="input-row">
-        <button class="btn-photo" onclick="document.getElementById('photo-input').click()">
+        <button type="button" class="btn-photo" onclick="document.getElementById('photo-input').click()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="8" width="18" height="13" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><circle cx="12" cy="14" r="2.5"/>
           </svg>
         </button>
         <textarea class="input-box" id="msg-input" rows="1" placeholder="What are you working on?" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-        <button class="btn-send" id="send-btn" onclick="sendMessage()" title="Send" aria-label="Send">Send</button>
+        <button type="button" class="btn-send" id="send-btn" onclick="sendMessage()" title="Send" aria-label="Send">Send</button>
       </div>
     </div>
     <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(event)">
@@ -364,9 +364,9 @@
 
     <!-- Parent sub-tabs -->
     <div class="psub">
-      <button class="psub-btn active" id="psub-overview" onclick="switchPSub('overview')">Overview</button>
-      <button class="psub-btn" id="psub-sessions" onclick="switchPSub('sessions')">Sessions</button>
-      <button class="psub-btn" id="psub-ask" onclick="switchPSub('ask')">Ask</button>
+      <button type="button" class="psub-btn active" id="psub-overview" onclick="switchPSub('overview')">Overview</button>
+      <button type="button" class="psub-btn" id="psub-sessions" onclick="switchPSub('sessions')">Sessions</button>
+      <button type="button" class="psub-btn" id="psub-ask" onclick="switchPSub('ask')">Ask</button>
     </div>
 
     <!-- Timeframe (applies to all sub-tabs) -->
@@ -410,7 +410,7 @@
           <div class="loading-bar"><div class="loading-bar-fill"></div></div>
           <p style="font-size:12px;color:var(--text3);font-family:sans-serif;margin-top:8px;">Reading his sessions...</p>
         </div>
-        <button class="refresh-btn" onclick="generateSummary()"><span id="generate-btn-label">↻ Refresh</span></button>
+        <button type="button" class="refresh-btn" onclick="generateSummary()"><span id="generate-btn-label">↻ Refresh</span></button>
       </div>
 
       <!-- Subject activity (tap to expand) -->
@@ -451,7 +451,7 @@
         <div id="ask-thread" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
           <textarea id="ask-input" rows="1" placeholder="e.g. How has Aden been doing this week?" onkeydown="handleAskKey(event)" oninput="autoResize(this)" style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;padding:11px 14px;font-size:15px;color:var(--text);resize:none;min-height:42px;max-height:110px;line-height:1.4;font-family:sans-serif;"></textarea>
-          <button id="ask-send-btn" onclick="askQuestion()" style="height:42px;padding:0 16px;border-radius:16px;background:var(--purple);color:white;font-size:14px;font-family:sans-serif;font-weight:600;flex-shrink:0;">Ask</button>
+          <button type="button" id="ask-send-btn" onclick="askQuestion()" style="height:42px;padding:0 16px;border-radius:16px;background:var(--purple);color:white;font-size:14px;font-family:sans-serif;font-weight:600;flex-shrink:0;">Ask</button>
         </div>
       </div>
     </div><!-- /ask -->
@@ -468,8 +468,8 @@
         <div style="font-size:11px;color:var(--text3);font-family:sans-serif;margin-top:2px" id="overlay-meta"></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
-        <button class="overlay-continue hidden" id="overlay-continue-btn" onclick="resumeSession()">↩ Continue</button>
-        <button class="overlay-close" onclick="document.getElementById('session-overlay').classList.add('hidden')">✕</button>
+        <button type="button" class="overlay-continue hidden" id="overlay-continue-btn" onclick="resumeSession()">↩ Continue</button>
+        <button type="button" class="overlay-close" onclick="document.getElementById('session-overlay').classList.add('hidden')">✕</button>
       </div>
     </div>
     <div class="overlay-messages" id="overlay-messages"></div>
@@ -630,7 +630,7 @@ function renderAttention() {
   const scope = sessionsInTimeframe();
   if (concern) {
     el.className = 'attention warn';
-    el.innerHTML = `<span class="attention-icon">⚠️</span><div class="attention-body"><strong>Worth a look</strong><span class="sub">${escapeHtml(concern.text)}</span><br><button class="attention-link" onclick="switchPSub('ask');askQuestion('You flagged a concern this period. What exactly was it? Quote the actual message or moment.')">Ask what happened →</button></div>`;
+    el.innerHTML = `<span class="attention-icon">⚠️</span><div class="attention-body"><strong>Worth a look</strong><span class="sub">${escapeHtml(concern.text)}</span><br><button type="button" class="attention-link" onclick="switchPSub('ask');askQuestion('You flagged a concern this period. What exactly was it? Quote the actual message or moment.')">Ask what happened →</button></div>`;
   } else if (scope.length) {
     el.className = 'attention calm';
     el.innerHTML = `<span class="attention-icon">✅</span><div class="attention-body"><strong>Nothing needs your attention</strong><span class="sub">Aden has been engaging well this period.</span></div>`;
@@ -833,11 +833,21 @@ async function loadSessions() {
       // Backfill titles for older rows that don't have one
       allSessions.forEach(s => { if (!s.title) s.title = sessionTitle(s.messages); });
       try { localStorage.setItem('aden_sessions', JSON.stringify(allSessions)); } catch(e) {}
-      return;
+    } else {
+      try { allSessions = JSON.parse(localStorage.getItem('aden_sessions') || '[]'); } catch(e) { allSessions = []; }
     }
-  } catch(e) { console.warn('Supabase load failed, using localStorage', e); }
-  // Fallback
-  try { allSessions = JSON.parse(localStorage.getItem('aden_sessions') || '[]'); } catch(e) { allSessions = []; }
+  } catch(e) {
+    console.warn('Supabase load failed, using localStorage', e);
+    try { allSessions = JSON.parse(localStorage.getItem('aden_sessions') || '[]'); } catch(e2) { allSessions = []; }
+  } finally {
+    // Clear the "Loading..." status on every exit path. updateSessionStatus()
+    // returns early for parents, so set their label explicitly.
+    if (currentRole === 'parent') {
+      document.getElementById('session-status').textContent = "Aden's progress";
+    } else {
+      updateSessionStatus();
+    }
+  }
 }
 
 async function pushToSupabase(session) {
@@ -1085,7 +1095,7 @@ function renderAskChips() {
   currentChips = chips;
   wrap.style.display = 'flex';
   wrap.innerHTML = chips.map((c, i) =>
-    `<button class="ask-chip" onclick="sendChip(${i})">${c.icon} ${escapeHtml(c.label)}</button>`
+    `<button type="button" class="ask-chip" onclick="sendChip(${i})">${c.icon} ${escapeHtml(c.label)}</button>`
   ).join('');
 }
 
