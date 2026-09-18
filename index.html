@@ -246,11 +246,46 @@
      spans the padded #view-summary width via negative margins, and sits above
      scrolling content (z-index 10) so nothing bleeds through underneath it. */
   .psub { position: sticky; top: 0; z-index: 10; background: var(--bg); margin: -20px -20px 8px; padding: 12px 20px 4px; }
-  .psub-inner { display: flex; gap: 4px; background: var(--surface2); border-radius: 12px; padding: 4px; }
+  /* Sub-tab row now also carries the timeframe filter on the right, so the
+     filter no longer eats a whole line of its own below. */
+  .psub-inner { display: flex; gap: 8px; align-items: center; }
+  .psub-tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: 12px; padding: 4px; flex: 1; min-width: 0; }
   .psub-btn { flex: 1; font-size: 13px; font-family: sans-serif; font-weight: 600; padding: 9px 8px; border-radius: 9px; background: transparent; color: var(--text2); transition: all 0.15s; }
   .psub-btn.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .psub-timeframe { flex-shrink: 0; font-family: sans-serif; font-size: 13px; padding: 9px 10px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface2); color: var(--text); max-width: 42vw; }
   .psub-view { display: none; flex-direction: column; gap: 16px; }
   .psub-view.active { display: flex; animation: fadeUp 0.2s ease; }
+
+  /* ═══ MERGED GLANCE CARD: subject pie + kept figures ═══ */
+  .glance-grid { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .pie-wrap { flex-shrink: 0; width: 128px; height: 128px; position: relative; }
+  .pie-wrap svg { width: 100%; height: 100%; display: block; transform: rotate(-90deg); }
+  .pie-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; }
+  .pie-center .pc-val { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; }
+  .pie-center .pc-lbl { font-size: 10px; font-family: sans-serif; color: var(--text3); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .pie-side { flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 12px; }
+  .pie-figures { display: flex; gap: 10px; }
+  .fig-box { flex: 1; background: var(--surface2); border-radius: var(--radius-sm); padding: 11px 8px; text-align: center; }
+  .fig-box .val { font-size: 22px; font-weight: 700; color: var(--teal); line-height: 1; }
+  .fig-box .lbl { font-size: 10px; color: var(--text2); font-family: sans-serif; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .pie-legend { display: flex; flex-direction: column; gap: 6px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-family: sans-serif; color: var(--text2); }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .legend-item .lg-count { margin-left: auto; color: var(--text3); font-size: 12px; }
+  .pie-empty { flex: 1; text-align: center; padding: 20px; color: var(--text3); font-family: sans-serif; font-size: 13px; }
+
+  /* ═══ NEXT-STEP SUGGESTION (inside attention banner) ═══ */
+  .suggest-box { margin-top: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 13px; }
+  .suggest-box .sg-label { font-size: 11px; font-family: sans-serif; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .suggest-box .sg-text { font-size: 13.5px; font-family: sans-serif; color: var(--text); line-height: 1.5; }
+  .suggest-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .sg-btn { font-family: sans-serif; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 20px; line-height: 1.2; transition: transform 0.12s; }
+  .sg-btn:active { transform: scale(0.96); }
+  .sg-btn.primary { background: var(--teal); color: #fff; }
+  .sg-btn.ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  /* Attention banner: allow the suggestion to stack under the head row */
+  .attention { flex-direction: column; gap: 0; }
+  .attention-head { display: flex; gap: 12px; align-items: flex-start; }
 
   /* Attention banner */
   .attention { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: var(--radius); }
@@ -366,23 +401,21 @@
   <!-- SUMMARY (Parent) -->
   <div id="view-summary">
 
-    <!-- Parent sub-tabs -->
+    <!-- Parent sub-tabs (timeframe filter sits inline on the right) -->
     <div class="psub">
       <div class="psub-inner">
-        <button type="button" class="psub-btn active" id="psub-overview" onclick="switchPSub('overview')">Overview</button>
-        <button type="button" class="psub-btn" id="psub-sessions" onclick="switchPSub('sessions')">Sessions</button>
-        <button type="button" class="psub-btn" id="psub-ask" onclick="switchPSub('ask')">Ask</button>
+        <div class="psub-tabs">
+          <button type="button" class="psub-btn active" id="psub-overview" onclick="switchPSub('overview')">Overview</button>
+          <button type="button" class="psub-btn" id="psub-sessions" onclick="switchPSub('sessions')">Sessions</button>
+          <button type="button" class="psub-btn" id="psub-ask" onclick="switchPSub('ask')">Ask</button>
+        </div>
+        <select id="timeframe-select" class="psub-timeframe" onchange="onTimeframeChange()" aria-label="Timeframe">
+          <option value="7">This week</option>
+          <option value="14">Last 2 weeks</option>
+          <option value="30">This month</option>
+          <option value="all">All time</option>
+        </select>
       </div>
-    </div>
-
-    <!-- Timeframe (applies to all sub-tabs) -->
-    <div style="display:flex;justify-content:flex-end;">
-      <select id="timeframe-select" onchange="onTimeframeChange()" style="font-family:sans-serif;font-size:13px;padding:7px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface2);color:var(--text);">
-        <option value="7">This week</option>
-        <option value="14">Last 2 weeks</option>
-        <option value="30">This month</option>
-        <option value="all">All time</option>
-      </select>
     </div>
 
     <!-- ═══ OVERVIEW ═══ -->
@@ -391,15 +424,18 @@
       <!-- Attention banner -->
       <div id="attention-banner"></div>
 
-      <!-- Stats -->
+      <!-- Merged: subject pie + kept figures (Sessions + Time spent) -->
       <div class="summary-card">
-        <h3 style="margin-bottom:12px;"><span class="dot"></span><span id="timeframe-label">This week</span></h3>
-        <div class="stat-row">
-          <div class="stat-box"><div class="val" id="stat-sessions">0</div><div class="lbl">Sessions</div></div>
-          <div class="stat-box"><div class="val" id="stat-messages">0</div><div class="lbl">Messages</div></div>
-          <div class="stat-box"><div class="val" id="stat-subjects">0</div><div class="lbl">Subjects</div></div>
-          <div class="stat-box"><div class="val" id="stat-photos">0</div><div class="lbl">Photos</div></div>
-          <div class="stat-box"><div class="val" id="stat-time">0m</div><div class="lbl">Time spent</div></div>
+        <h3 style="margin-bottom:14px;"><span class="dot"></span><span id="timeframe-label">This week</span></h3>
+        <div class="glance-grid">
+          <div class="pie-wrap" id="pie-wrap"></div>
+          <div class="pie-side">
+            <div class="pie-figures">
+              <div class="fig-box"><div class="val" id="stat-sessions">0</div><div class="lbl">Sessions</div></div>
+              <div class="fig-box"><div class="val" id="stat-time">0m</div><div class="lbl">Time spent</div></div>
+            </div>
+            <div class="pie-legend" id="pie-legend"></div>
+          </div>
         </div>
       </div>
 
@@ -417,16 +453,6 @@
           <p style="font-size:12px;color:var(--text3);font-family:sans-serif;margin-top:8px;">Reading his sessions...</p>
         </div>
         <button type="button" class="refresh-btn" onclick="generateSummary()"><span id="generate-btn-label">↻ Refresh</span></button>
-      </div>
-
-      <!-- Subject activity (tap to expand) -->
-      <div class="collapse" id="col-subjects">
-        <div class="collapse-head" onclick="toggleCollapse('col-subjects')"><span>Subject activity</span><span class="chev">▾</span></div>
-        <div class="collapse-body">
-          <div class="progress-row" id="subject-progress">
-            <p style="font-size:13px;color:var(--text3);font-family:sans-serif;">Start some sessions to see activity here.</p>
-          </div>
-        </div>
       </div>
 
       <!-- Full write-up (tap to expand, appears once generated) -->
@@ -642,22 +668,84 @@ function renderParentSessions() {
   }).join('');
 }
 
-/* ══════ ATTENTION BANNER ══════ */
+/* ══════ ATTENTION BANNER + NEXT-STEP SUGGESTION ══════ */
+// Turn the flags / period state into ONE clear thing the parent can do next.
+let _sgActions = [];
+function runSuggestion(i) { const a = _sgActions[i]; if (a && a.run) a.run(); }
+
+function buildSuggestion(scope) {
+  const flags = lastFlags || [];
+  const concern = flags.find(f => (f.icon || '') === '⚠️');
+  const idea = flags.find(f => (f.icon || '') === '💡');
+  const star = flags.find(f => (f.icon || '') === '🌟');
+
+  if (concern) {
+    return {
+      label: 'Suggested next step',
+      text: 'Have a short, relaxed check-in with Aden about this — no need to make it a big deal. Get the full context first so you know what was said.',
+      actions: [
+        { cls: 'primary', label: 'See what happened →', run: () => { switchPSub('ask'); askQuestion('You flagged a concern this period. What exactly was it? Quote the actual message or moment, and tell me how Stockfish responded.'); } },
+        { cls: 'ghost', label: 'How do I bring it up?', run: () => { switchPSub('ask'); askQuestion('Give me one gentle, low-pressure way to bring up the concern you flagged with Aden, in a sentence or two I could actually say.'); } },
+      ]
+    };
+  }
+  if (idea) {
+    return {
+      label: 'Suggested next step',
+      text: idea.text,
+      actions: [
+        { cls: 'primary', label: 'One thing I can do →', run: () => { switchPSub('ask'); askQuestion("What is the single most useful 10-minute thing I can do at home this week to support Aden, based on this period?"); } },
+      ]
+    };
+  }
+  if (star) {
+    return {
+      label: 'Nice moment to build on',
+      text: star.text + ' — worth a quick word of encouragement.',
+      actions: [
+        { cls: 'ghost', label: 'What should I praise? →', run: () => { switchPSub('ask'); askQuestion('What specifically did Aden do well this period that I could genuinely praise him for? Keep it concrete.'); } },
+      ]
+    };
+  }
+  if (scope.length) {
+    return {
+      label: 'Suggested next step',
+      text: 'Nothing needs action right now. If you want more detail, refresh the read below or ask a question.',
+      actions: [
+        { cls: 'ghost', label: 'Summarise this week →', run: () => { switchPSub('ask'); askQuestion('Give me a short, friendly overview of how Aden has been doing this week.'); } },
+      ]
+    };
+  }
+  return null;
+}
+
 function renderAttention() {
   const el = document.getElementById('attention-banner');
   if (!el) return;
   const concern = (lastFlags || []).find(f => (f.icon || '') === '⚠️');
   const scope = sessionsInTimeframe();
+
+  let head;
   if (concern) {
     el.className = 'attention warn';
-    el.innerHTML = `<span class="attention-icon">⚠️</span><div class="attention-body"><strong>Worth a look</strong><span class="sub">${escapeHtml(concern.text)}</span><br><button type="button" class="attention-link" onclick="switchPSub('ask');askQuestion('You flagged a concern this period. What exactly was it? Quote the actual message or moment.')">Ask what happened →</button></div>`;
+    head = `<div class="attention-head"><span class="attention-icon">⚠️</span><div class="attention-body"><strong>Worth a look</strong><span class="sub">${escapeHtml(concern.text)}</span></div></div>`;
   } else if (scope.length) {
     el.className = 'attention calm';
-    el.innerHTML = `<span class="attention-icon">✅</span><div class="attention-body"><strong>Nothing needs your attention</strong><span class="sub">Aden has been engaging well this period.</span></div>`;
+    head = `<div class="attention-head"><span class="attention-icon">✅</span><div class="attention-body"><strong>Nothing needs your attention</strong><span class="sub">Aden has been engaging well this period.</span></div></div>`;
   } else {
     el.className = 'attention calm';
-    el.innerHTML = `<span class="attention-icon">📚</span><div class="attention-body"><strong>No sessions yet in this period</strong><span class="sub">Pick a wider timeframe, or check back after Aden's next session.</span></div>`;
+    el.innerHTML = `<div class="attention-head"><span class="attention-icon">📚</span><div class="attention-body"><strong>No sessions yet in this period</strong><span class="sub">Pick a wider timeframe, or check back after Aden's next session.</span></div></div>`;
+    return;
   }
+
+  const sg = buildSuggestion(scope);
+  let sgHtml = '';
+  if (sg) {
+    _sgActions = sg.actions;
+    const btns = sg.actions.map((a, i) => `<button type="button" class="sg-btn ${a.cls}" onclick="runSuggestion(${i})">${escapeHtml(a.label)}</button>`).join('');
+    sgHtml = `<div class="suggest-box"><div class="sg-label">${escapeHtml(sg.label)}</div><div class="sg-text">${escapeHtml(sg.text)}</div><div class="suggest-actions">${btns}</div></div>`;
+  }
+  el.innerHTML = head + sgHtml;
 }
 
 /* ══════ TABS ══════ */
@@ -983,19 +1071,63 @@ function onTimeframeChange() {
   }
 }
 
+/* Subject colours — shared by the pie and its legend */
+const SUBJECT_COLORS = {
+  Maths: '#3a86ff', Reading: '#79b022', Writing: '#7a6cf0',
+  Science: '#f4a300', Wellbeing: '#e6608c', Hobbies: '#f0744a', General: '#9aa3b8'
+};
+function subjColor(s) { return SUBJECT_COLORS[s] || '#9aa3b8'; }
+function subjClass(s) {
+  return s === 'Maths' ? 'maths' : s === 'Reading' ? 'reading' : s === 'Writing' ? 'writing'
+    : s === 'Science' ? 'science' : s === 'Wellbeing' ? 'wellbeing' : s === 'Hobbies' ? 'hobbies' : '';
+}
+
+/* Subject donut — pure SVG, no libraries. Counts sessions per subject. */
+function renderSubjectPie(scope) {
+  const wrap = document.getElementById('pie-wrap');
+  const legend = document.getElementById('pie-legend');
+  if (!wrap || !legend) return;
+
+  const counts = {};
+  scope.forEach(s => { counts[s.subject] = (counts[s.subject] || 0) + 1; });
+  const entries = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+  const total = entries.reduce((a, [,c]) => a + c, 0);
+  const r = 15.915, C = 100; // circumference = 100 units → dasharray in %
+
+  if (!total) {
+    wrap.innerHTML = `<svg viewBox="0 0 42 42"><circle cx="21" cy="21" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="7"/></svg>
+      <div class="pie-center"><div class="pc-val">0</div><div class="pc-lbl">Subjects</div></div>`;
+    legend.innerHTML = `<div class="pie-empty">No subject activity yet in this period.</div>`;
+    return;
+  }
+
+  let offset = 25; // start at 12 o'clock
+  const segs = entries.map(([sub, c]) => {
+    const pct = (c / total) * C;
+    const seg = `<circle cx="21" cy="21" r="${r}" fill="none" stroke="${subjColor(sub)}" stroke-width="7"
+      stroke-dasharray="${pct.toFixed(2)} ${(C - pct).toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"/>`;
+    offset -= pct;
+    return seg;
+  }).join('');
+
+  wrap.innerHTML = `<svg viewBox="0 0 42 42">
+    <circle cx="21" cy="21" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="7"/>
+    ${segs}
+  </svg>
+  <div class="pie-center"><div class="pc-val">${entries.length}</div><div class="pc-lbl">Subjects</div></div>`;
+
+  legend.innerHTML = entries.map(([sub, c]) => {
+    const pct = Math.round((c / total) * 100);
+    return `<div class="legend-item"><span class="legend-swatch" style="background:${subjColor(sub)}"></span><span>${escapeHtml(sub)}</span><span class="lg-count">${c} · ${pct}%</span></div>`;
+  }).join('');
+}
+
 function updateStats() {
   const scope = sessionsInTimeframe();
+  // Only two figures kept — Sessions + Time spent. Subject mix lives in the pie.
   document.getElementById('stat-sessions').textContent = scope.length;
-  document.getElementById('stat-messages').textContent = scope.reduce((a,s) => a + s.messages.length, 0);
-  document.getElementById('stat-subjects').textContent = [...new Set(scope.map(s => s.subject))].length;
-  document.getElementById('stat-photos').textContent = scope.reduce((a,s) => a + (s.photoCount||0), 0);
   document.getElementById('stat-time').textContent = formatDuration(scope.reduce((a,s) => a + (s.durationSeconds||0), 0));
-  const sc = {}; scope.forEach(s => { sc[s.subject] = (sc[s.subject]||0) + s.messages.length; });
-  const mx = Math.max(...Object.values(sc), 1);
-  const pe = document.getElementById('subject-progress');
-  pe.innerHTML = !Object.keys(sc).length
-    ? `<p style="font-size:13px;color:var(--text3);font-family:sans-serif;">No sessions in this period.</p>`
-    : Object.entries(sc).map(([sub, c]) => `<div class="progress-item"><div class="progress-label"><span>${sub}</span><span>${c} messages</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${Math.round(c/mx*100)}%"></div></div></div>`).join('');
+  renderSubjectPie(scope);
 }
 
 function renderSummaryResult(flags, savedAtIso) {
