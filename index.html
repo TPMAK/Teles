@@ -547,6 +547,7 @@ function logout() {
 let currentSubject = 'General';
 let currentSessionId = null;
 let sessionMessages = [];
+let sessionFlags = [];
 let photoBase64 = null;
 let allSessions = [];
 let isSending = false;
@@ -628,7 +629,7 @@ function renderParentSessions() {
     const title = s.title || sessionTitle(s.messages);
     return `<div class="session-card" onclick="openSession('${s.id}')">
       <div class="session-card-header"><span class="session-card-title">${escapeHtml(title)}</span><span class="session-card-date">${formatDateTime(s.date)}</span></div>
-      <div class="session-card-meta"><span class="badge ${bc}">${s.subject}</span>${s.photoCount > 0 ? `<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">📸 ${s.photoCount}</span>` : ''}<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">${s.messages.length} messages</span></div>
+      <div class="session-card-meta"><span class="badge ${bc}">${s.subject}</span>${(s.flags && s.flags.length) ? `<span style="font-size:11px;font-family:sans-serif;font-weight:700;color:var(--red);">⚠️ ${s.flags.length}</span>` : ''}${s.photoCount > 0 ? `<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">📸 ${s.photoCount}</span>` : ''}<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">${s.messages.length} messages</span></div>
       ${pt ? `<div class="session-preview">${escapeHtml(pt)}</div>` : ''}
     </div>`;
   }).join('');
@@ -678,6 +679,7 @@ function startNewSession() {
   currentSessionId = generateId();
   currentSubject = 'General';
   sessionMessages = [];
+  sessionFlags = [];
   sessionActiveSeconds = 0;
   photoBase64 = null;
   removePhoto();
@@ -755,6 +757,10 @@ async function sendMessage() {
     const data = await res.json();
     const reply = data.reply || data.message || data.text || JSON.stringify(data);
     if (data.subject && typeof data.subject === 'string') currentSubject = data.subject;
+    // Accumulate any parent flag Stockfish raised on this turn (app is the sole writer of flags)
+    if (data.flag && typeof data.flag === 'string' && data.flag.trim()) {
+      sessionFlags.push({ icon: '⚠️', text: data.flag.trim(), at: new Date().toISOString() });
+    }
     hideThinking(thinkId);
     const tutorMsg = { role: 'tutor', text: reply, time: new Date().toISOString() };
     sessionMessages.push(tutorMsg);
@@ -813,6 +819,7 @@ function saveCurrentSession() {
     messages: [...sessionMessages], photoCount: sessionMessages.filter(m => m.photo).length,
     title: sessionTitle(sessionMessages),
     durationSeconds: sessionActiveSeconds,
+    flags: [...sessionFlags],
   };
   const idx = allSessions.findIndex(s => s.id === currentSessionId);
   if (idx >= 0) allSessions[idx] = session; else allSessions.unshift(session);
@@ -837,6 +844,10 @@ async function loadSessions() {
         photoCount: r.photo_count || 0,
         title: r.title || '',
         durationSeconds: r.duration_seconds || 0,
+        flags: (() => {
+          try { return typeof r.flags === 'string' ? JSON.parse(r.flags) : (r.flags || []); }
+          catch(e) { return []; }
+        })(),
         messages: (() => {
           try { return typeof r.messages === 'string' ? JSON.parse(r.messages) : (r.messages || []); }
           catch(e) { return []; }
@@ -867,7 +878,7 @@ async function pushToSupabase(session) {
     await fetch(`${config.supabaseUrl}/rest/v1/sessions`, {
       method: 'POST',
       headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify({ id: session.id, subject: session.subject, date: session.date, messages: JSON.stringify(session.messages), photo_count: session.photoCount, message_count: session.messages.length, title: session.title, duration_seconds: session.durationSeconds })
+      body: JSON.stringify({ id: session.id, subject: session.subject, date: session.date, messages: JSON.stringify(session.messages), photo_count: session.photoCount, message_count: session.messages.length, title: session.title, duration_seconds: session.durationSeconds, flags: (session.flags && session.flags.length) ? JSON.stringify(session.flags) : null })
     });
   } catch(e) { console.warn('Supabase push failed:', e); }
 }
@@ -924,6 +935,7 @@ function resumeSession() {
   currentSessionId = session.id;
   currentSubject = session.subject || 'General';
   sessionMessages = session.messages.map(m => ({ ...m }));
+  sessionFlags = Array.isArray(session.flags) ? session.flags.map(f => ({ ...f })) : [];
   photoBase64 = null;
   removePhoto();
 
