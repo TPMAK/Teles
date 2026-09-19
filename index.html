@@ -2,10 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- Non-translucent status bar + no viewport-fit=cover: iOS reserves the
+     status-bar and home-indicator strips itself and the app sits in the safe
+     region between them. This is what makes Odin's bottom nav pin reliably in a
+     standalone PWA. "black-translucent" + viewport-fit=cover extended content
+     into the safe areas and mis-measured the bottom, leaving a large phantom gap
+     under the nav in the installed web app. "black" (vs Odin's "default")
+     keeps a dark status bar with white text to match StockFish's navy top bar. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="StockFish">
 <meta name="theme-color" content="#1F2540">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
