@@ -330,6 +330,13 @@
     .login-mobile-mascot { display: block; }
     .login-box h2 { font-size: 30px; }
     .sidebar { display: none; }
+    /* Pin the whole app shell to the real visual viewport (same trick
+       #login-screen already uses reliably). The height:100% inheritance chain
+       (body 100dvh -> .app -> .main) under-resolved in the iOS standalone PWA,
+       ending the flex column short and floating the bottom nav above the
+       physical bottom. Fixing inset:0 bypasses that chain so the nav's flex
+       position lands on the true screen bottom, above the home indicator. */
+    .app { position: fixed; inset: 0; }
     .topbar { display: flex; }
     .bottomnav { display: flex; }
     .pagehead { padding: 16px 16px 12px; flex-direction: column; align-items: stretch; gap: 12px; }
