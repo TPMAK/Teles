@@ -34,8 +34,9 @@
     --safe-t: env(safe-area-inset-top, 0px);
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; overflow: hidden; }
-  body { font-family: var(--f-body); background: var(--bg); color: var(--text); padding-top: var(--safe-t); -webkit-text-size-adjust: 100%; }
+  html { height: 100%; }
+  body { height: 100vh; height: 100dvh; overflow: hidden; }
+  body { font-family: var(--f-body); background: var(--bg); color: var(--text); -webkit-text-size-adjust: 100%; }
   button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; -webkit-tap-highlight-color: transparent; }
   button:disabled { cursor: default; }
   input, textarea, select { font-family: inherit; color: inherit; }
@@ -65,7 +66,7 @@
   .login-hero .dot2 { position: absolute; left: 10px; bottom: 26px; width: 30px; height: 30px; border-radius: 50%; background: var(--coral); }
   .login-art h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(32px, 3.4vw, 46px); line-height: 1.08; margin-bottom: 14px; }
   .login-art p { font-size: 19px; line-height: 1.5; color: var(--navy-muted); }
-  .login-side { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; overflow-y: auto; }
+  .login-side { flex: 1; display: flex; align-items: center; justify-content: center; padding: calc(24px + var(--safe-t)) 24px calc(24px + var(--safe-b)); overflow-y: auto; }
   .login-box { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 24px; padding-bottom: var(--safe-b); }
   .login-mobile-mascot { display: none; width: 76px; height: 76px; }
   .login-box h2 { font-family: var(--f-display); font-weight: 700; font-size: 36px; }
@@ -107,7 +108,7 @@
   .icon-btn:hover { background: rgba(255,255,255,0.08); }
 
   .main { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; }
-  .topbar { display: none; height: 64px; padding: 0 16px; background: var(--navy); align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .topbar { display: none; height: calc(64px + var(--safe-t)); padding: var(--safe-t) 16px 0; background: var(--navy); align-items: center; justify-content: space-between; flex-shrink: 0; }
   .topbar .sb-brand { padding: 0; gap: 10px; }
   .topbar .tile { width: 36px; height: 36px; border-radius: 12px; }
   .topbar .sb-brand-name { font-size: 18px; }
