@@ -295,6 +295,7 @@
   .sg-btn.ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
   /* Attention banner: allow the suggestion to stack under the head row */
   .attention { flex-direction: column; gap: 0; }
+  #attention-banner { display: flex; flex-direction: column; gap: 12px; }
   .attention-head { display: flex; gap: 12px; align-items: flex-start; }
 
   /* Attention banner */
@@ -752,25 +753,6 @@ function renderAttention() {
   const concern = flags.find(f => (f.icon || '') === '⚠️');
   const scope = sessionsInTimeframe();
 
-  let head;
-  if (urgent) {
-    el.className = 'attention warn';
-    head = `<div class="attention-head"><span class="attention-icon">🚨</span><div class="attention-body"><strong>Worth a look</strong><span class="sub">${escapeHtml(urgent.text)}</span></div></div>`;
-  } else if (star) {
-    el.className = 'attention good';
-    head = `<div class="attention-head"><span class="attention-icon">🌟</span><div class="attention-body"><strong>Good sign</strong><span class="sub">${escapeHtml(star.text)}</span></div></div>`;
-  } else if (concern) {
-    el.className = 'attention calm';
-    head = `<div class="attention-head"><span class="attention-icon">✅</span><div class="attention-body"><strong>Nothing urgent</strong><span class="sub">One thing worth knowing about below.</span></div></div>`;
-  } else if (scope.length) {
-    el.className = 'attention calm';
-    head = `<div class="attention-head"><span class="attention-icon">✅</span><div class="attention-body"><strong>Nothing needs your attention</strong><span class="sub">Aden has been engaging well this period.</span></div></div>`;
-  } else {
-    el.className = 'attention calm';
-    el.innerHTML = `<div class="attention-head"><span class="attention-icon">📚</span><div class="attention-body"><strong>No sessions yet in this period</strong><span class="sub">Pick a wider timeframe, or check back after Aden's next session.</span></div></div>`;
-    return;
-  }
-
   const sg = buildSuggestion(scope);
   let sgHtml = '';
   if (sg) {
@@ -778,7 +760,29 @@ function renderAttention() {
     const btns = sg.actions.map((a, i) => `<button type="button" class="sg-btn ${a.cls}" onclick="runSuggestion(${i})">${escapeHtml(a.label)}</button>`).join('');
     sgHtml = `<div class="suggest-box"><div class="sg-label">${escapeHtml(sg.label)}</div><div class="sg-text">${escapeHtml(sg.text)}</div><div class="suggest-actions">${btns}</div></div>`;
   }
-  el.innerHTML = head + sgHtml;
+
+  // Urgent dominates on its own -- don't dilute it by showing good news alongside a crisis.
+  if (urgent) {
+    el.innerHTML = `<div class="attention warn"><div class="attention-head"><span class="attention-icon">🚨</span><div class="attention-body"><strong>Worth a look</strong><span class="sub">${escapeHtml(urgent.text)}</span></div></div>${sgHtml}</div>`;
+    return;
+  }
+
+  // Otherwise: good and concern are shown TOGETHER, not one hiding the other.
+  const cards = [];
+  if (star) {
+    cards.push(`<div class="attention good"><div class="attention-head"><span class="attention-icon">🌟</span><div class="attention-body"><strong>Good sign</strong><span class="sub">${escapeHtml(star.text)}</span></div></div></div>`);
+  }
+  if (concern) {
+    cards.push(`<div class="attention calm"><div class="attention-head"><span class="attention-icon">⚠️</span><div class="attention-body"><strong>Worth knowing</strong><span class="sub">${escapeHtml(concern.text)}</span></div></div></div>`);
+  }
+
+  if (cards.length) {
+    el.innerHTML = cards.join('') + sgHtml;
+  } else if (scope.length) {
+    el.innerHTML = `<div class="attention calm"><div class="attention-head"><span class="attention-icon">✅</span><div class="attention-body"><strong>Nothing needs your attention</strong><span class="sub">Aden has been engaging well this period.</span></div></div>${sgHtml}</div>`;
+  } else {
+    el.innerHTML = `<div class="attention calm"><div class="attention-head"><span class="attention-icon">📚</span><div class="attention-body"><strong>No sessions yet in this period</strong><span class="sub">Pick a wider timeframe, or check back after Aden's next session.</span></div></div></div>`;
+  }
 }
 
 /* ══════ TABS ══════ */
