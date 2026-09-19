@@ -35,7 +35,10 @@
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { height: 100%; }
-  body { height: 100vh; height: 100svh; overflow: hidden; }
+  /* 100dvh (dynamic viewport height) fills the real visible screen in an iOS
+     standalone PWA -- 100svh/100vh can under-report and leave a cream band below
+     the bottom nav (the home-indicator area painted with the body background). */
+  body { height: 100vh; height: 100dvh; overflow: hidden; }
   body { font-family: var(--f-body); background: var(--bg); color: var(--text); -webkit-text-size-adjust: 100%; }
   button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; -webkit-tap-highlight-color: transparent; }
   button:disabled { cursor: default; }
@@ -758,6 +761,7 @@ function switchPSub(sub) {
     if (v) v.classList.toggle('active', s === sub);
   });
   if (sub === 'sessions') renderParentSessions();
+  if (sub === 'ask') renderAskChips(); // re-roll the rotating chip selection each time Ask opens
   setNavActive(sub); setPageTitle(sub);
   document.getElementById('view-summary').scrollTop = 0;
 }
@@ -884,11 +888,19 @@ function startNewSession() {
   updateSessionStatus();
 }
 
+const ADEN_WELCOMES = [
+  `Hey Aden! 👋 I'm Stockfish. I can help three ways: 🧠 work through homework (I won't just hand you answers — I'll help you think!), 💛 talk things out if something's on your mind, and 🎉 hear about the stuff you love.<br><br>What's up today? Type it, or snap a photo of your homework.`,
+  `Yo Aden! 🐟 Stockfish here, ready when you are. We can 🧠 crack some homework together, 💛 chat if something's bugging you, or 🎉 talk about whatever you're into.<br><br>What are we doing today? Tell me, or snap a pic of your work.`,
+  `Hey hey Aden! 👋 It's Stockfish. Three things I'm great at: 🧠 helping your brain solve homework (no just-giving-answers here!), 💛 listening if you've had a big feeling, and 🎉 geeking out about the stuff you love.<br><br>So... what's the mission today? Type it, or snap a photo.`,
+  `Aden! 🎉 Good to see you — Stockfish reporting for duty. 🧠 Stuck on homework? I'll help you figure it out. 💛 Rough day or something on your mind? I'm all ears. Just want to chat about something cool? Even better.<br><br>What's up? Type away, or send a photo of your homework.`,
+  `Hi Aden! 👋 Stockfish here, ready to go. We can 🧠 tackle homework the smart way (you do the thinking, I do the nudging!), 💛 talk about anything on your mind, or 🎉 chat about the things you're excited about.<br><br>Where should we start? Type it, or snap your homework.`,
+];
+
 function appendWelcomeMessage() {
   const isParent = currentRole === 'parent';
   const msg = isParent
     ? `👋 Welcome to the parent view.<br><br>Use <strong>Overview</strong> for the week's summary, <strong>Sessions</strong> to read conversations, and <strong>Ask</strong> to ask questions.`
-    : `Hey Aden! 👋 I'm Stockfish. I'm here to help you three ways: 🧠 work through homework (I won't just give you answers — I'll help you think!), 💛 talk things out if you're feeling something, and 🎉 hear about the stuff you love.<br><br>What's up today? Type it, or snap a photo of your homework.`;
+    : ADEN_WELCOMES[Math.floor(Math.random() * ADEN_WELCOMES.length)];
   const wrap = document.getElementById('messages');
   const div = document.createElement('div');
   div.className = 'msg tutor';
@@ -1232,7 +1244,7 @@ function renderSubjectPie(scope) {
 
   legend.innerHTML = entries.map(([sub, c]) => {
     const pct = Math.round((c / total) * 100);
-    return `<div class="legend-item"><span class="legend-swatch" style="background:${subjColor(sub)}"></span><span>${escapeHtml(sub)}</span><span class="lg-count">${c} · ${pct}%</span></div>`;
+    return `<div class="legend-item"><span class="legend-swatch" style="background:${subjColor(sub)}"></span><span>${escapeHtml(sub)}</span><span class="lg-count">${pct}%</span></div>`;
   }).join('');
 }
 
@@ -1350,21 +1362,36 @@ const ASK_CHIPS = [
   { icon: '⏱️', label: 'Is he using it a healthy amount?', q: 'Is Aden using this tutor a healthy amount, or leaning on it too heavily? What does his usage pattern look like?' },
 ];
 
+const MAX_ASK_CHIPS = 5;
+
 function renderAskChips() {
   const wrap = document.getElementById('ask-chips');
   if (!wrap) return;
-  let chips = [...ASK_CHIPS];
-  // If something was flagged this period, surface a direct chip about it first
+
+  // Pinned chips always show first: a flag chip (if flagged this period), then
+  // the "Summarise this week" lead chip. The rest of the slots are filled with a
+  // random pick from the remaining chips, reshuffled each time the view opens.
+  const pinned = [];
   const hasUrgent = (lastFlags || []).some(f => (f.icon || '') === '🚨');
   const hasConcern = (lastFlags || []).some(f => (f.icon || '') === '⚠️');
   if (hasUrgent) {
-    chips.unshift({ icon: '🚨', label: 'What did you flag?', q: 'You flagged something urgent this period. What exactly was it? Quote the actual message or moment.' });
+    pinned.push({ icon: '🚨', label: 'What did you flag?', q: 'You flagged something urgent this period. What exactly was it? Quote the actual message or moment.' });
   } else if (hasConcern) {
-    chips.unshift({ icon: '⚠️', label: 'What did you flag?', q: 'You flagged a concern this period. What exactly was it? Quote the actual message or moment.' });
+    pinned.push({ icon: '⚠️', label: 'What did you flag?', q: 'You flagged a concern this period. What exactly was it? Quote the actual message or moment.' });
   }
+  const lead = ASK_CHIPS.find(c => c.lead);
+  if (lead) pinned.push(lead);
+
+  const rest = ASK_CHIPS.filter(c => !c.lead);
+  for (let i = rest.length - 1; i > 0; i--) { // Fisher-Yates shuffle
+    const j = Math.floor(Math.random() * (i + 1));
+    [rest[i], rest[j]] = [rest[j], rest[i]];
+  }
+  const chips = [...pinned, ...rest].slice(0, MAX_ASK_CHIPS);
+
   currentChips = chips;
   wrap.classList.remove('hidden');
-    wrap.innerHTML = chips.map((c, i) =>
+  wrap.innerHTML = chips.map((c, i) =>
     `<button type="button" class="ask-chip" onclick="sendChip(${i})">${escapeHtml(c.label)}</button>`
   ).join('');
 }
