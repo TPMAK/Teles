@@ -139,7 +139,14 @@
   .msg-avatar svg { width: 100%; height: 100%; display: block; }
   .msg-avatar .mascot { width: 100%; height: 100%; display: block; }
   .msg.user .msg-avatar { background: var(--yellow); color: var(--night); }
-  .msg-bubble { max-width: 78%; padding: 11px 14px; border-radius: 16px; line-height: 1.65; font-size: 15px; background: var(--surface); border: 1px solid var(--border); }
+  /* max-width lives on .msg-content (whose containing block, .msg, has a definite
+     width) rather than on .msg-bubble itself -- .msg-bubble's own parent has no
+     defined width of its own, so a percentage max-width there was resolving
+     against that parent's shrink-to-fit size instead of the intended row width,
+     capping short bubbles (e.g. "Testing the UX") narrower than their own text
+     and forcing an unnecessary wrap. */
+  .msg-content { max-width: 78%; min-width: 0; }
+  .msg-bubble { width: fit-content; max-width: 100%; padding: 11px 14px; border-radius: 16px; line-height: 1.65; font-size: 15px; background: var(--surface); border: 1px solid var(--border); }
   .msg.user .msg-bubble { background: var(--teal-dim); border-color: var(--teal); border-radius: 16px 16px 4px 16px; }
   .msg.tutor .msg-bubble { border-radius: 16px 16px 16px 4px; }
   .msg-bubble p { margin-bottom: 8px; }
@@ -204,7 +211,7 @@
   .empty-state p { font-family: sans-serif; font-size: 14px; line-height: 1.7; }
 
   /* SUMMARY */
-  #view-summary { flex: 1; overflow-y: auto; padding: 20px; display: none; flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch; }
+  #view-summary { flex: 1; overflow-y: auto; padding: 0 20px 20px; display: none; flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch; }
   .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
   .summary-card h3 { font-size: 14px; color: var(--text); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
   .summary-card h3 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); flex-shrink: 0; }
@@ -242,10 +249,13 @@
   @keyframes load { 0%{width:0;margin-left:0} 50%{width:80%;margin-left:10%} 100%{width:0;margin-left:100%} }
 
   /* PARENT SUB-TABS (tap to see one thing at a time) */
-  /* FIX: sticky strip is now fully opaque edge-to-edge (background: var(--bg)),
-     spans the padded #view-summary width via negative margins, and sits above
-     scrolling content (z-index 10) so nothing bleeds through underneath it. */
-  .psub { position: sticky; top: 0; z-index: 10; background: var(--bg); margin: -20px -20px 8px; padding: 12px 20px 4px; }
+  /* Sticky strip is opaque edge-to-edge (background: var(--bg)) and spans the
+     padded #view-summary width via negative left/right margins. Its own
+     padding-top supplies the top breathing room -- #view-summary carries no
+     top padding, so the strip sits flush at the scroll container's true top
+     edge with zero gap. (A negative top margin here previously left a ~20px
+     gap where scrolled-past card content was still visible above the strip.) */
+  .psub { position: sticky; top: 0; z-index: 10; background: var(--bg); margin: 0 -20px 8px; padding: 20px 20px 4px; }
   /* Sub-tab row now also carries the timeframe filter on the right, so the
      filter no longer eats a whole line of its own below. */
   .psub-inner { display: flex; gap: 8px; align-items: center; }
@@ -290,6 +300,7 @@
   /* Attention banner */
   .attention { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: var(--radius); }
   .attention.warn { background: var(--red-light); border: 1px solid var(--teal-dim); }
+  .attention.good { background: var(--amber-light); border: 1px solid var(--amber); }
   .attention.calm { background: var(--surface); border: 1px solid var(--border); }
   .attention-icon { font-size: 20px; flex-shrink: 0; line-height: 1.4; }
   .attention-body { font-family: sans-serif; font-size: 14px; line-height: 1.55; }
@@ -421,10 +432,7 @@
     <!-- ═══ OVERVIEW ═══ -->
     <div class="psub-view active" id="pview-overview">
 
-      <!-- Attention banner -->
-      <div id="attention-banner"></div>
-
-      <!-- Merged: subject pie + kept figures (Sessions + Time spent) -->
+      <!-- Figures first: subject pie + kept figures (Sessions + Time spent) -->
       <div class="summary-card">
         <h3 style="margin-bottom:14px;"><span class="dot"></span><span id="timeframe-label">This week</span></h3>
         <div class="glance-grid">
@@ -438,6 +446,12 @@
           </div>
         </div>
       </div>
+
+      <!-- Attention banner: only leads with alarm for a genuinely urgent (🚨) flag.
+           A standout (🌟) leads with an equally prominent positive "Good sign"
+           card instead. Routine concerns (⚠️) get a calm, non-alarming note,
+           not the red hero treatment -- see renderAttention(). -->
+      <div id="attention-banner"></div>
 
       <!-- At a glance -->
       <div class="summary-card">
@@ -675,17 +689,27 @@ function runSuggestion(i) { const a = _sgActions[i]; if (a && a.run) a.run(); }
 
 function buildSuggestion(scope) {
   const flags = lastFlags || [];
-  const concern = flags.find(f => (f.icon || '') === '⚠️');
-  const idea = flags.find(f => (f.icon || '') === '💡');
+  const urgent = flags.find(f => (f.icon || '') === '🚨');
   const star = flags.find(f => (f.icon || '') === '🌟');
+  const idea = flags.find(f => (f.icon || '') === '💡');
+  const concern = flags.find(f => (f.icon || '') === '⚠️');
 
-  if (concern) {
+  if (urgent) {
     return {
       label: 'Suggested next step',
       text: 'Have a short, relaxed check-in with Aden about this — no need to make it a big deal. Get the full context first so you know what was said.',
       actions: [
-        { cls: 'primary', label: 'See what happened →', run: () => { switchPSub('ask'); askQuestion('You flagged a concern this period. What exactly was it? Quote the actual message or moment, and tell me how Stockfish responded.'); } },
+        { cls: 'primary', label: 'See what happened →', run: () => { switchPSub('ask'); askQuestion('You flagged something urgent this period. What exactly was it? Quote the actual message or moment, and tell me how Stockfish responded.'); } },
         { cls: 'ghost', label: 'How do I bring it up?', run: () => { switchPSub('ask'); askQuestion('Give me one gentle, low-pressure way to bring up the concern you flagged with Aden, in a sentence or two I could actually say.'); } },
+      ]
+    };
+  }
+  if (star) {
+    return {
+      label: 'Nice moment to build on',
+      text: star.text + ' — worth a quick word of encouragement.',
+      actions: [
+        { cls: 'primary', label: 'What should I praise? →', run: () => { switchPSub('ask'); askQuestion('What specifically did Aden do well this period that I could genuinely praise him for? Keep it concrete.'); } },
       ]
     };
   }
@@ -698,12 +722,12 @@ function buildSuggestion(scope) {
       ]
     };
   }
-  if (star) {
+  if (concern) {
     return {
-      label: 'Nice moment to build on',
-      text: star.text + ' — worth a quick word of encouragement.',
+      label: 'Worth keeping an eye on',
+      text: 'Nothing urgent, but here\'s something worth knowing: ' + concern.text,
       actions: [
-        { cls: 'ghost', label: 'What should I praise? →', run: () => { switchPSub('ask'); askQuestion('What specifically did Aden do well this period that I could genuinely praise him for? Keep it concrete.'); } },
+        { cls: 'ghost', label: 'Tell me more →', run: () => { switchPSub('ask'); askQuestion('You flagged something worth knowing about this period. What exactly was it? Quote the actual message or moment, and tell me how Stockfish responded.'); } },
       ]
     };
   }
@@ -722,13 +746,22 @@ function buildSuggestion(scope) {
 function renderAttention() {
   const el = document.getElementById('attention-banner');
   if (!el) return;
-  const concern = (lastFlags || []).find(f => (f.icon || '') === '⚠️');
+  const flags = lastFlags || [];
+  const urgent = flags.find(f => (f.icon || '') === '🚨');
+  const star = flags.find(f => (f.icon || '') === '🌟');
+  const concern = flags.find(f => (f.icon || '') === '⚠️');
   const scope = sessionsInTimeframe();
 
   let head;
-  if (concern) {
+  if (urgent) {
     el.className = 'attention warn';
-    head = `<div class="attention-head"><span class="attention-icon">⚠️</span><div class="attention-body"><strong>Worth a look</strong><span class="sub">${escapeHtml(concern.text)}</span></div></div>`;
+    head = `<div class="attention-head"><span class="attention-icon">🚨</span><div class="attention-body"><strong>Worth a look</strong><span class="sub">${escapeHtml(urgent.text)}</span></div></div>`;
+  } else if (star) {
+    el.className = 'attention good';
+    head = `<div class="attention-head"><span class="attention-icon">🌟</span><div class="attention-body"><strong>Good sign</strong><span class="sub">${escapeHtml(star.text)}</span></div></div>`;
+  } else if (concern) {
+    el.className = 'attention calm';
+    head = `<div class="attention-head"><span class="attention-icon">✅</span><div class="attention-body"><strong>Nothing urgent</strong><span class="sub">One thing worth knowing about below.</span></div></div>`;
   } else if (scope.length) {
     el.className = 'attention calm';
     head = `<div class="attention-head"><span class="attention-icon">✅</span><div class="attention-body"><strong>Nothing needs your attention</strong><span class="sub">Aden has been engaging well this period.</span></div></div>`;
@@ -878,7 +911,7 @@ function appendMessage(role, text, photo) {
   const avatar = role === 'tutor' ? mascot() : 'A';
   const bubbleHtml = `<p>${escapeHtml(text).replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</p>`
     + (photo ? `<img class="msg-img" src="${photo}" alt="Homework">` : '');
-  div.innerHTML = `<div class="msg-avatar">${avatar}</div><div><div class="msg-bubble">${bubbleHtml}</div><div class="msg-time">${formatTime(new Date())}</div></div>`;
+  div.innerHTML = `<div class="msg-avatar">${avatar}</div><div class="msg-content"><div class="msg-bubble">${bubbleHtml}</div><div class="msg-time">${formatTime(new Date())}</div></div>`;
   wrap.appendChild(div);
   wrap.scrollTop = wrap.scrollHeight;
 }
@@ -1239,9 +1272,12 @@ function renderAskChips() {
   const wrap = document.getElementById('ask-chips');
   if (!wrap) return;
   let chips = [...ASK_CHIPS];
-  // If a concern was flagged this period, surface a direct chip about it first
+  // If something was flagged this period, surface a direct chip about it first
+  const hasUrgent = (lastFlags || []).some(f => (f.icon || '') === '🚨');
   const hasConcern = (lastFlags || []).some(f => (f.icon || '') === '⚠️');
-  if (hasConcern) {
+  if (hasUrgent) {
+    chips.unshift({ icon: '🚨', label: 'What did you flag?', q: 'You flagged something urgent this period. What exactly was it? Quote the actual message or moment.' });
+  } else if (hasConcern) {
     chips.unshift({ icon: '⚠️', label: 'What did you flag?', q: 'You flagged a concern this period. What exactly was it? Quote the actual message or moment.' });
   }
   currentChips = chips;
