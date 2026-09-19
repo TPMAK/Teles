@@ -196,7 +196,7 @@
   .session-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 10px; }
   .session-card-title { font-size: 14px; font-weight: 700; min-width: 0; }
   .session-card-date { font-size: 11px; color: var(--text3); font-family: sans-serif; flex-shrink: 0; white-space: nowrap; }
-  .session-card-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 5px; }
+  .session-card-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 5px; }
   .badge { font-size: 11px; font-family: sans-serif; font-weight: 600; padding: 2px 9px; border-radius: 20px; background: #D3D1C7; color: #444441; }
   .badge.maths { background: #B5D4F4; color: #0C447C; }
   .badge.reading { background: #C0DD97; color: #27500A; }
@@ -660,6 +660,15 @@ function toggleCollapse(id) {
   document.getElementById(id).classList.toggle('open');
 }
 
+/* ══════ SUBJECT BADGES (a session can now carry more than one) ══════ */
+function subjectBadgeClass(subject) {
+  return subject === 'Maths' ? 'maths' : subject === 'Reading' ? 'reading' : subject === 'Writing' ? 'writing' : subject === 'Science' ? 'science' : subject === 'Wellbeing' ? 'wellbeing' : subject === 'Hobbies' ? 'hobbies' : '';
+}
+function renderSubjectBadges(s) {
+  const subjects = (s.subjects && s.subjects.length) ? s.subjects : [s.subject];
+  return subjects.map(sub => `<span class="badge ${subjectBadgeClass(sub)}">${escapeHtml(sub)}</span>`).join('');
+}
+
 /* ══════ PARENT SESSIONS LIST (reuses openSession overlay) ══════ */
 function renderParentSessions() {
   const scope = sessionsInTimeframe();
@@ -673,11 +682,10 @@ function renderParentSessions() {
   list.innerHTML = scope.map(s => {
     const preview = s.messages.find(m => m.role === 'tutor');
     const pt = preview ? preview.text.slice(0,90) + (preview.text.length > 90 ? '…' : '') : '';
-    const bc = s.subject === 'Maths' ? 'maths' : s.subject === 'Reading' ? 'reading' : s.subject === 'Writing' ? 'writing' : s.subject === 'Science' ? 'science' : s.subject === 'Wellbeing' ? 'wellbeing' : s.subject === 'Hobbies' ? 'hobbies' : '';
     const title = s.title || sessionTitle(s.messages);
     return `<div class="session-card" onclick="openSession('${s.id}')">
       <div class="session-card-header"><span class="session-card-title">${escapeHtml(title)}</span><span class="session-card-date">${formatDateTime(s.date)}</span></div>
-      <div class="session-card-meta"><span class="badge ${bc}">${s.subject}</span>${s.photoCount > 0 ? `<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">📸 ${s.photoCount}</span>` : ''}<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">${s.messages.length} messages</span></div>
+      <div class="session-card-meta">${renderSubjectBadges(s)}${s.photoCount > 0 ? `<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">📸 ${s.photoCount}</span>` : ''}<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">${s.messages.length} messages</span></div>
       ${pt ? `<div class="session-preview">${escapeHtml(pt)}</div>` : ''}
     </div>`;
   }).join('');
@@ -966,6 +974,12 @@ async function loadSessions() {
       allSessions = rows.map(r => ({
         id: r.id,
         subject: r.subject,
+        subjects: (() => {
+          try {
+            const parsed = typeof r.subjects === 'string' ? JSON.parse(r.subjects) : r.subjects;
+            return (Array.isArray(parsed) && parsed.length) ? parsed : [r.subject];
+          } catch(e) { return [r.subject]; }
+        })(),
         date: r.date,
         photoCount: r.photo_count || 0,
         title: r.title || '',
@@ -1017,11 +1031,10 @@ function renderHistory() {
   list.innerHTML = allSessions.map(s => {
     const preview = s.messages.find(m => m.role === 'tutor');
     const pt = preview ? preview.text.slice(0,100) + (preview.text.length > 100 ? '…' : '') : '';
-    const bc = s.subject === 'Maths' ? 'maths' : s.subject === 'Reading' ? 'reading' : s.subject === 'Writing' ? 'writing' : s.subject === 'Science' ? 'science' : s.subject === 'Wellbeing' ? 'wellbeing' : s.subject === 'Hobbies' ? 'hobbies' : '';
     const title = s.title || sessionTitle(s.messages);
     return `<div class="session-card" onclick="openSession('${s.id}')">
       <div class="session-card-header"><span class="session-card-title">${escapeHtml(title)}</span><span class="session-card-date">${formatDateTime(s.date)}</span></div>
-      <div class="session-card-meta"><span class="badge ${bc}">${s.subject}</span>${s.photoCount > 0 ? `<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">📸 ${s.photoCount}</span>` : ''}</div>
+      <div class="session-card-meta">${renderSubjectBadges(s)}${s.photoCount > 0 ? `<span style="font-size:11px;color:var(--text3);font-family:sans-serif;">📸 ${s.photoCount}</span>` : ''}</div>
       ${pt ? `<div class="session-preview">${escapeHtml(pt)}</div>` : ''}
       <div class="session-msg-count">${s.messages.length} messages</div>
     </div>`;
