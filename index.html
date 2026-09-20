@@ -143,7 +143,7 @@
   .icon-btn { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--navy-muted); flex-shrink: 0; }
   .icon-btn:hover { background: rgba(255,255,255,0.08); }
 
-  .main { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; }
+  .main { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; position: relative; }
   .topbar { display: none; height: calc(64px + var(--safe-t)); padding: var(--safe-t) 16px 0; background: var(--navy); align-items: center; justify-content: space-between; flex-shrink: 0; }
   .topbar .sb-brand { padding: 0; gap: 10px; }
   .topbar .tile { width: 36px; height: 36px; border-radius: 12px; }
@@ -296,6 +296,29 @@
   .refresh-btn:disabled { opacity: 0.5; }
   .loading-bar { height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
   .loading-bar-fill { height: 100%; background: var(--gold-dark); border-radius: 2px; animation: load 1.8s ease-in-out infinite; }
+
+  /* ── Parent portal splash: shown for a couple of seconds while the
+     first data load runs, so the portal never opens on an empty page ── */
+  #parent-loading { position: fixed; inset: 0; z-index: 250; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+    padding: 32px; text-align: center; opacity: 1; transition: opacity 0.4s ease; }
+  #parent-loading.fade { opacity: 0; pointer-events: none; }
+  #parent-loading .pl-mascot { width: 84px; height: 84px; display: block; animation: plbob 2.4s ease-in-out infinite; }
+  #parent-loading .pl-mascot svg { width: 100%; height: 100%; display: block; }
+  #parent-loading .pl-title { font-family: var(--f-display); font-weight: 700; font-size: 22px; color: var(--text); }
+  #parent-loading .pl-sub { font-size: 15px; color: var(--text2); max-width: 260px; line-height: 1.5; }
+  #parent-loading .pl-bar { width: 180px; max-width: 60vw; }
+  @keyframes plbob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+  /* ── Pull-to-refresh indicator (mobile: pull a scrolled-to-top view down) ── */
+  .ptr-indicator { position: absolute; top: 0; left: 50%; z-index: 40;
+    width: 38px; height: 38px; border-radius: 50%; background: var(--surface);
+    box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center;
+    color: var(--gold-dark); opacity: 0; pointer-events: none;
+    transform: translate(-50%, -48px); }
+  .ptr-indicator svg { width: 20px; height: 20px; }
+  .ptr-indicator.spinning svg { animation: ptrspin 0.7s linear infinite; }
+  @keyframes ptrspin { to { transform: rotate(360deg); } }
   .collapse { border: 1px solid var(--border); border-radius: 24px; background: var(--surface); overflow: hidden; }
   .collapse-head { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 20px 28px; font-family: var(--f-display); font-weight: 700; font-size: 20px; text-align: left; min-height: 44px; }
   .collapse-head .chev { color: var(--text3); transition: transform 0.2s; font-size: 14px; }
@@ -487,6 +510,9 @@
   </aside>
 
   <div class="main">
+    <div class="ptr-indicator" id="ptr-indicator" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v5h-5"/></svg>
+    </div>
     <header class="topbar">
       <div class="sb-brand"><span class="tile js-mascot"></span><span class="sb-brand-name">StockFish</span></div>
       <div class="topbar-right">
@@ -615,6 +641,14 @@
   </div>
 </div>
 
+<!-- PARENT PORTAL LOADING SPLASH -->
+<div id="parent-loading" style="display:none">
+  <span class="pl-mascot js-mascot"></span>
+  <div class="pl-title">Getting Aden's progress…</div>
+  <div class="pl-sub">Pulling the latest sessions together. This just takes a moment.</div>
+  <div class="pl-bar loading-bar"><div class="loading-bar-fill"></div></div>
+</div>
+
 <!-- SESSION OVERLAY -->
 <div class="overlay hidden" id="session-overlay" onclick="closeOverlay(event)" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
   <div class="overlay-panel">
@@ -720,16 +754,128 @@ async function initApp() {
   document.querySelectorAll('.js-mascot').forEach(e => { e.innerHTML = MASCOT_SVG; });
   applyRole();
   renderNav();
+  setupPullToRefresh();
+
+  if (currentRole === 'parent') { initParentApp(); return; }
+
   await loadSessions();
   currentSessionId = generateId();
   sessionMessages = [];
   document.getElementById('messages').innerHTML = '';
   appendWelcomeMessage();
   updateSessionStatus();
-  if (currentRole === 'parent') {
-    switchTab('summary');
-    loadCachedSummary();
+}
+
+// Parent portal: show a short loading splash, then drop into the page while
+// the data (which usually takes 2-3s) keeps loading behind it. We reveal as
+// soon as the data lands — but never faster than MIN (so it doesn't just
+// flash) and never slower than MAX (so a slow network still opens the page,
+// and the summary fills in a moment later).
+async function initParentApp() {
+  const MIN = 1200, MAX = 3000, start = Date.now();
+
+  // Prep the underlying page so it's ready the instant the splash lifts.
+  currentSessionId = generateId();
+  sessionMessages = [];
+  document.getElementById('messages').innerHTML = '';
+  appendWelcomeMessage();
+  showParentLoading();
+  showSummaryView();
+
+  // Kick the data loads off in the background — nothing here blocks the reveal.
+  const dataReady = (async () => {
+    await loadSessions();
+    onTimeframeChange();
+    await loadCachedSummary();
+  })();
+
+  let revealed = false;
+  const reveal = () => { if (revealed) return; revealed = true; hideParentLoading(); };
+  dataReady
+    .catch(e => console.warn('Parent data load failed', e))
+    .then(() => setTimeout(reveal, Math.max(0, MIN - (Date.now() - start))));
+  setTimeout(reveal, MAX);
+}
+
+function showParentLoading() {
+  const el = document.getElementById('parent-loading');
+  el.classList.remove('fade');
+  el.style.display = 'flex';
+}
+function hideParentLoading() {
+  const el = document.getElementById('parent-loading');
+  el.classList.add('fade');
+  setTimeout(() => { el.style.display = 'none'; }, 450);
+}
+
+// Show the parent summary view without re-triggering a data load (switchTab
+// awaits loadSessions; here the load is already running in the background).
+function showSummaryView() {
+  document.getElementById('view-chat').style.display = 'none';
+  document.getElementById('view-history').style.display = 'none';
+  document.getElementById('view-summary').style.display = 'flex';
+  setNavActive(currentPSub); setPageTitle(currentPSub);
+}
+
+/* ══════ PULL-TO-REFRESH (mobile) ══════
+   Pull a scrolled-to-top view downward to reload the page. Works on the chat,
+   history and parent views. A full reload keeps things simple and safe: the
+   role is remembered in sessionStorage, so it lands right back where it was. */
+let ptrBound = false;
+function setupPullToRefresh() {
+  if (ptrBound) return;
+  ptrBound = true;
+
+  const indicator = document.getElementById('ptr-indicator');
+  const scrollers = ['messages', 'view-history', 'view-summary'];
+  const THRESHOLD = 72, MAX_PULL = 110;
+  let startY = 0, pull = 0, active = false, target = null, refreshing = false;
+
+  function setIndicator(dist) {
+    const y = Math.min(dist, MAX_PULL);
+    const shown = Math.max(0, y);
+    indicator.style.transform = `translate(-50%, ${-48 + shown * 0.7}px) rotate(${shown * 3}deg)`;
+    indicator.style.opacity = String(Math.min(1, shown / THRESHOLD));
   }
+  function reset() {
+    active = false; pull = 0; target = null;
+    indicator.classList.remove('spinning');
+    indicator.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+    indicator.style.transform = 'translate(-50%, -48px)';
+    indicator.style.opacity = '0';
+    setTimeout(() => { indicator.style.transition = ''; }, 260);
+  }
+
+  document.addEventListener('touchstart', e => {
+    if (refreshing || e.touches.length !== 1) return;
+    const el = scrollers.map(id => document.getElementById(id))
+      .find(s => s && s.style.display !== 'none' && s.contains(e.target));
+    if (!el || el.scrollTop > 0) return;
+    target = el; startY = e.touches[0].clientY; pull = 0; active = true;
+    indicator.style.transition = '';
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!active || refreshing) return;
+    pull = e.touches[0].clientY - startY;
+    if (pull <= 0 || (target && target.scrollTop > 0)) { active = false; setIndicator(0); return; }
+    if (e.cancelable) e.preventDefault(); // hold back native rubber-band while pulling
+    setIndicator(pull * 0.55);
+  }, { passive: false });
+
+  document.addEventListener('touchend', () => {
+    if (!active || refreshing) return;
+    if (pull * 0.55 >= THRESHOLD) {
+      refreshing = true;
+      indicator.style.transition = 'transform 0.2s ease';
+      indicator.style.transform = 'translate(-50%, 28px)';
+      indicator.style.opacity = '1';
+      indicator.classList.add('spinning');
+      setTimeout(() => location.reload(), 350);
+    } else {
+      reset();
+    }
+  }, { passive: true });
 }
 
 function applyRole() {
