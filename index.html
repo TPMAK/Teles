@@ -495,8 +495,17 @@
   --sfo-gold:#f2a01e; --sfo-gold-tint:#fdeecb; --sfo-gold-line:#efd08a; --sfo-gold-ink:#8a5a12;
   --sfo-coral:#e23d2e; --sfo-coral-dark:#b32619; --sfo-coral-tint:#fbe2dd; --sfo-coral-line:#f2b9b2;
   --sfo-blue-tint:#d9e4fb; --sfo-blue-ink:#284a86;
-  display:flex; flex-direction:column; gap:12px; max-width:520px; margin:0 auto; width:100%;
+  display:flex; flex-direction:column; gap:12px; max-width:560px; margin:0 auto; width:100%;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; color:var(--sfo-ink); }
+/* mobile: the top wrapper is transparent so note + card stack in the column */
+#sfo-root .sfo-top2{ display:contents; }
+/* desktop: widen and put note + Time&subjects side by side */
+@media (min-width:900px){
+  #sfo-root{ max-width:920px; gap:16px; }
+  #sfo-root .sfo-top2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:stretch; }
+  #sfo-root .sfo-top2 > :only-child{ grid-column:1 / -1; }
+  #sfo-root .sfo-top2 .sfo-card{ height:100%; }
+}
 #sfo-root *{ box-sizing:border-box; }
 #sfo-root button{ font-family:inherit; }
 #sfo-root .sfo-titlerow{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
@@ -559,8 +568,22 @@
 #sfo-root .sfo-dots span{ width:8px; height:8px; border-radius:50%; background:#d5d1c6; cursor:pointer; }
 #sfo-root .sfo-dots span.sfo-on{ background:var(--sfo-navy); }
 #sfo-root .sfo-full{ margin-top:10px; font-size:15px; line-height:1.55; }
-/* While the compact overview shows, hide the old page title + timeframe pills (it has its own) */
-body.sfo-overview .pagehead{ display:none !important; }
+
+/* ===== Responsive overview switch =====
+   Phones: compact #sfo-root (own title + pills). Desktop: the full-width original (#ov-legacy). */
+#ov-legacy{ display:none; }                                  /* phones: original hidden */
+@media (max-width:899px){
+  body.sfo-overview .pagehead{ display:none !important; }    /* phones: compact has its own header */
+}
+@media (min-width:900px){
+  #sfo-root{ display:none !important; }                      /* desktop: hide the compact column */
+  #ov-legacy{ display:flex; flex-direction:column; gap:24px; }
+  /* Expand the For you / At a glance carousel into stacked full-width sections (use the space) */
+  #ov-legacy .pctabs, #ov-legacy .pcdots{ display:none; }
+  #ov-legacy .pcviewport{ overflow:visible; height:auto !important; }
+  #ov-legacy .pctrack{ transform:none !important; flex-direction:column; gap:24px; }
+  #ov-legacy .pcpane{ min-width:0; width:100%; }
+}
 </style>
 </head>
 <body>
@@ -702,8 +725,8 @@ body.sfo-overview .pagehead{ display:none !important; }
       <div class="psub-view active" id="pview-overview">
         <!-- Compact "Wise-style" overview (renders from your existing data functions) -->
         <div id="sfo-root"></div>
-        <!-- Old overview kept in the DOM (hidden) so existing render functions keep working -->
-        <div id="ov-legacy" hidden aria-hidden="true">
+        <!-- Full-width original overview — shown on desktop (see #ov-legacy media queries) -->
+        <div id="ov-legacy">
         <div class="week-note hidden" id="week-note">
           <div class="week-note-ico" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9"/></svg>
@@ -2101,6 +2124,7 @@ window.SFOverview = (function(){
         </button>
       </div>
       <div class="sfo-period">${pills}</div>
+      <div class="sfo-top2">
       ${note}
       <div class="sfo-card">
         <div class="sfo-ts-head"><div class="sfo-t">Time &amp; subjects</div>
@@ -2111,6 +2135,7 @@ window.SFOverview = (function(){
             <div class="sfo-hole"><b>${d.subjects.length}</b><span class="sfo-muted" style="font-size:11px">Subjects</span></div></div>
           <div class="sfo-legend">${legend}</div></div>
       </div>
+      </div><!-- /sfo-top2 -->
       <div class="sfo-tabs">
         <button class="${tab===0?'sfo-on':''}" data-tab="0">At a glance</button>
         <button class="${tab===1?'sfo-on':''}" data-tab="1">For you</button>
