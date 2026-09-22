@@ -797,8 +797,12 @@ async function initParentApp() {
   // Kick the data loads off in the background — nothing here blocks the reveal.
   const dataReady = (async () => {
     await loadSessions();
+    // Mark the current timeframe as "shown" so onTimeframeChange doesn't also
+    // fire a cache load — we do that explicitly (and awaited) just below.
+    shownSummaryTf = document.getElementById('timeframe-select').value;
     onTimeframeChange();
     await loadCachedSummary();
+    maybeAutoRefreshSummary(); // fire-and-forget: regenerate if Aden chatted since the cache
   })();
 
   let revealed = false;
@@ -1394,6 +1398,26 @@ function resumeSession() {
 
 /* ══════ SUMMARY ══════ */
 let lastGeneratedTimeframe = null;
+let shownSummaryTf = null;            // timeframe key whose cached summary is on screen
+let lastSummaryCreatedAt = 0;         // ms epoch of the shown summary's created_at (0 = none)
+let summaryGenerating = false;        // a summary request is currently in flight
+const summaryAutoTried = new Set();   // timeframes already auto-refreshed this session
+
+// Newest session timestamp in a scope (ms epoch). Used to tell if a summary is stale.
+function newestSessionTime(scope) {
+  return (scope || allSessions).reduce((t, s) => Math.max(t, Date.parse(s.date) || 0), 0);
+}
+// Regenerate the AI write-up in the background when Aden has done a session since
+// the cached summary was made (or when this timeframe has no summary yet). Quiet:
+// shows the cached one instantly, swaps in the fresh one when it lands.
+function maybeAutoRefreshSummary() {
+  if (summaryGenerating) return;
+  const scope = sessionsInTimeframe();
+  if (!scope.length) return;                     // nothing to summarise
+  if (newestSessionTime(scope) > lastSummaryCreatedAt) {  // a chat is newer than the cache (0 = no cache)
+    generateSummary({ silent: true });
+  }
+}
 
 function getTimeframeDays() {
   const v = document.getElementById('timeframe-select').value;
@@ -1417,11 +1441,14 @@ function onTimeframeChange() {
   renderAskChips();
   renderAttention();
   if (currentPSub === 'sessions') renderParentSessions();
-  // Timeframe changed — the shown summary and Q&A are for a different period now
-  if (lastGeneratedTimeframe !== null && lastGeneratedTimeframe !== document.getElementById('timeframe-select').value) {
+  // Each timeframe has its own saved summary + Q&A. When it changes, reset the
+  // Q&A thread, load that period's cached summary, then refresh it if it's stale.
+  const tfKey = document.getElementById('timeframe-select').value;
+  if (shownSummaryTf !== tfKey) {
+    shownSummaryTf = tfKey;
     document.getElementById('ask-thread').innerHTML = '';
     askHistory = [];
-    loadCachedSummary();
+    loadCachedSummary().then(maybeAutoRefreshSummary);
   }
 }
 
@@ -1512,17 +1539,19 @@ function relativeTime(d) {
 }
 
 async function loadCachedSummary() {
-  // Pull the most recent saved summary from Supabase and show it instantly (no Claude call)
-  const stamp = document.getElementById('summary-saved-at');
+  // Pull the latest saved summary FOR THE CURRENT TIMEFRAME and show it instantly (no Claude call)
+  const tfKey = document.getElementById('timeframe-select').value;
+  lastSummaryCreatedAt = 0;
   try {
     const res = await fetch(
-      `${config.supabaseUrl}/rest/v1/summaries?order=created_at.desc&limit=1`,
+      `${config.supabaseUrl}/rest/v1/summaries?timeframe=eq.${encodeURIComponent(tfKey)}&order=created_at.desc&limit=1`,
       { headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}` } }
     );
     if (res.ok) {
       const rows = await res.json();
       if (rows.length) {
         const r = rows[0];
+        lastSummaryCreatedAt = Date.parse(r.created_at) || 0;
         let flags = [];
         try { flags = typeof r.flags === 'string' ? JSON.parse(r.flags) : (r.flags || []); } catch(e) { flags = []; }
         renderSummaryResult(flags, r.created_at);
@@ -1534,25 +1563,41 @@ async function loadCachedSummary() {
       }
     }
   } catch(e) { console.warn('No cached summary yet', e); }
-  // Nothing saved yet — leave the AI card hidden, prompt via the button
-  renderAskChips();
+  // Nothing saved yet for this timeframe — clear last period's write-up and reset
+  // the "At a glance" card. maybeAutoRefreshSummary() will generate a fresh one.
+  document.getElementById('col-written').classList.add('hidden');
+  document.getElementById('ai-summary-text').innerHTML = '';
+  renderSummaryResult([], null);
 }
 
-async function generateSummary() {
+async function generateSummary(opts = {}) {
+  const silent = !!opts.silent;                       // silent = background auto-refresh, no UI noise
+  const tfKey = document.getElementById('timeframe-select').value;
   const scope = sessionsInTimeframe();
   if (!scope.length) {
-    alert('No sessions in this period yet. Pick a wider timeframe or wait for Aden to do some sessions.');
+    if (!silent) alert('No sessions in this period yet. Pick a wider timeframe or wait for Aden to do some sessions.');
     return;
   }
-  document.getElementById('loading-bar-wrap').classList.remove('hidden');
-  document.querySelector('.refresh-btn').disabled = true;
+  // Never overlap requests; auto-refresh a given timeframe at most once per session.
+  if (summaryGenerating) return;
+  if (silent) {
+    if (summaryAutoTried.has(tfKey)) return;
+    summaryAutoTried.add(tfKey);
+  }
+  summaryGenerating = true;
+
+  if (!silent) {
+    document.getElementById('loading-bar-wrap').classList.remove('hidden');
+    document.querySelector('.refresh-btn').disabled = true;
+  }
   try {
     const res = await fetch(config.summaryWebhook, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         mode: 'summary',
-        timeframe: getTimeframeLabel(),
+        timeframe: getTimeframeLabel(), // human label ('This week') — used in the Claude prompt text
+        timeframeKey: tfKey,            // stable key ('7'|'14'|'30'|'all') — tags/upserts the saved row
         sessions: scope.map(s => ({
           subject: s.subject, date: s.date, messageCount: s.messages.length,
           messages: s.messages.map(m => ({ role: m.role, content: (m.text || '').slice(0, 300) }))
@@ -1560,19 +1605,27 @@ async function generateSummary() {
       })
     });
     const data = await res.json();
-    const flags = data.flags || [];
-    renderSummaryResult(flags, new Date().toISOString());
-    if (data.summary) {
-      document.getElementById('ai-summary-text').innerHTML = renderSummaryMarkdown(data.summary);
-      document.getElementById('col-written').classList.remove('hidden');
+    // Only paint if the parent is still viewing the timeframe we generated for.
+    if (document.getElementById('timeframe-select').value === tfKey) {
+      const nowIso = new Date().toISOString();
+      renderSummaryResult(data.flags || [], nowIso);
+      lastSummaryCreatedAt = Date.parse(nowIso);
+      if (data.summary) {
+        document.getElementById('ai-summary-text').innerHTML = renderSummaryMarkdown(data.summary);
+        document.getElementById('col-written').classList.remove('hidden');
+      }
     }
-    lastGeneratedTimeframe = document.getElementById('timeframe-select').value;
+    lastGeneratedTimeframe = tfKey;
   } catch(e) {
-    alert('Could not refresh. Make sure the summary workflow is active in n8n.');
+    if (!silent) alert('Could not refresh. Make sure the summary workflow is active in n8n.');
     console.error(e);
+  } finally {
+    summaryGenerating = false;
+    if (!silent) {
+      document.getElementById('loading-bar-wrap').classList.add('hidden');
+      document.querySelector('.refresh-btn').disabled = false;
+    }
   }
-  document.getElementById('loading-bar-wrap').classList.add('hidden');
-  document.querySelector('.refresh-btn').disabled = false;
 }
 
 /* ══════ PARENT Q&A ══════ */
