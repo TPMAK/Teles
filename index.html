@@ -489,6 +489,79 @@
     .overlay-messages { padding: 16px; }
   }
 </style>
+<style id="sfo-styles">
+/* ===== Compact "Wise-style" overview — all scoped under #sfo-root ===== */
+#sfo-root{ --sfo-navy:#1a2233; --sfo-ink:#1a2233; --sfo-muted:#6b7280; --sfo-line:#e6e3da;
+  --sfo-gold:#f2a01e; --sfo-gold-tint:#fdeecb; --sfo-gold-line:#efd08a; --sfo-gold-ink:#8a5a12;
+  --sfo-coral:#e23d2e; --sfo-coral-dark:#b32619; --sfo-coral-tint:#fbe2dd; --sfo-coral-line:#f2b9b2;
+  --sfo-blue-tint:#d9e4fb; --sfo-blue-ink:#284a86;
+  display:flex; flex-direction:column; gap:12px; max-width:520px; margin:0 auto; width:100%;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; color:var(--sfo-ink); }
+#sfo-root *{ box-sizing:border-box; }
+#sfo-root button{ font-family:inherit; }
+#sfo-root .sfo-titlerow{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+#sfo-root .sfo-h1{ font-family:var(--f-display); font-size:30px; font-weight:700; line-height:1.1; margin:0; }
+#sfo-root .sfo-stamp{ color:var(--sfo-muted); font-size:13px; margin-top:4px; }
+#sfo-root .sfo-refresh{ flex-shrink:0; width:44px; height:44px; border-radius:50%; background:#fff;
+  border:1px solid var(--sfo-line); color:var(--sfo-ink); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+#sfo-root .sfo-period{ display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; }
+#sfo-root .sfo-period::-webkit-scrollbar{ display:none; }
+#sfo-root .sfo-period button{ flex:0 0 auto; padding:11px 20px; border-radius:24px; border:1px solid var(--sfo-line);
+  background:#fff; color:var(--sfo-ink); font-size:15px; font-weight:600; cursor:pointer; white-space:nowrap; }
+#sfo-root .sfo-period button.sfo-on{ background:var(--sfo-navy); color:#fff; border-color:var(--sfo-navy); }
+#sfo-root .sfo-note{ display:flex; gap:12px; align-items:flex-start; background:var(--sfo-gold-tint);
+  border:1px solid var(--sfo-gold-line); border-radius:16px; padding:14px 16px; }
+#sfo-root .sfo-note-ico{ width:28px; height:28px; border-radius:9px; background:var(--sfo-gold); color:var(--sfo-navy);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+#sfo-root .sfo-note-k{ font-size:12px; font-weight:700; color:var(--sfo-gold-ink); letter-spacing:.5px; text-transform:uppercase; }
+#sfo-root .sfo-note-t{ font-size:17px; line-height:1.35; margin-top:3px; font-weight:500; }
+#sfo-root .sfo-note-body{ flex-grow:1; }
+#sfo-root .sfo-note-x{ background:none; border:none; color:var(--sfo-gold-ink); cursor:pointer; padding:4px; margin:-4px -6px 0 0; flex-shrink:0; }
+#sfo-root .sfo-card{ background:#fff; border-radius:20px; padding:18px 20px; box-shadow:0 1px 2px rgba(20,34,51,.05); }
+#sfo-root .sfo-muted{ color:var(--sfo-muted); }
+#sfo-root .sfo-ts-head{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:14px; }
+#sfo-root .sfo-ts-head .sfo-t{ font-family:var(--f-display); font-size:20px; font-weight:700; }
+#sfo-root .sfo-ts-stats{ display:flex; gap:16px; align-items:baseline; }
+#sfo-root .sfo-ts-stats b{ font-size:20px; font-weight:700; }
+#sfo-root .sfo-ts-body{ display:flex; align-items:center; gap:18px; }
+#sfo-root .sfo-donut{ position:relative; width:104px; height:104px; flex-shrink:0; }
+#sfo-root .sfo-donut .sfo-ring{ width:104px; height:104px; border-radius:50%; }
+#sfo-root .sfo-donut .sfo-hole{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:66px; height:66px; border-radius:50%; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+#sfo-root .sfo-donut .sfo-hole b{ font-size:22px; font-weight:700; line-height:1; font-family:var(--f-display); }
+#sfo-root .sfo-legend{ flex-grow:1; display:flex; flex-direction:column; gap:10px; }
+#sfo-root .sfo-legend .sfo-row{ display:flex; align-items:center; gap:10px; font-size:16px; }
+#sfo-root .sfo-legend .sfo-row span:nth-child(2){ flex-grow:1; }
+#sfo-root .sfo-legend .sfo-row b{ font-weight:700; }
+#sfo-root .sfo-dot{ width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+#sfo-root .sfo-tabs{ display:flex; border-bottom:1px solid var(--sfo-line); }
+#sfo-root .sfo-tabs button{ flex:1; padding:11px 0 10px; background:none; border:none; border-bottom:2px solid transparent;
+  color:#8a8f9a; font-size:16px; font-weight:500; cursor:pointer; }
+#sfo-root .sfo-tabs button.sfo-on{ color:var(--sfo-ink); font-weight:700; border-bottom-color:var(--sfo-navy); }
+#sfo-root .sfo-pane{ min-height:60px; }
+#sfo-root .sfo-tag{ font-size:12px; font-weight:600; padding:4px 11px; border-radius:20px; display:inline-block; height:fit-content; }
+#sfo-root .sfo-grow{ padding:9px 0; display:flex; gap:12px; }
+#sfo-root .sfo-txt{ font-size:16px; line-height:1.4; flex-grow:1; }
+#sfo-root .sfo-div{ height:1px; background:#eee9df; }
+#sfo-root .sfo-flag{ display:flex; gap:12px; padding:13px 14px; border-radius:14px; align-items:flex-start; margin-bottom:8px;
+  background:var(--sfo-coral-tint); border:1px solid var(--sfo-coral-line); }
+#sfo-root .sfo-flag .sfo-txt{ font-size:17px; font-weight:600; }
+#sfo-root .sfo-flag .sfo-act{ margin-top:8px; background:none; border:none; padding:0; font-size:15px; font-weight:700; color:var(--sfo-coral-dark); cursor:pointer; }
+#sfo-root .sfo-fullbtn{ margin-top:10px; width:100%; background:#f6f4ee; border:none; border-radius:14px; padding:13px 0; font-size:15px; font-weight:600; color:var(--sfo-ink); cursor:pointer; }
+#sfo-root .sfo-foryou{ display:flex; flex-direction:column; gap:10px; }
+#sfo-root .sfo-coach{ border-radius:16px; padding:14px 16px; }
+#sfo-root .sfo-coach .sfo-hd{ display:flex; align-items:center; gap:9px; }
+#sfo-root .sfo-coach .sfo-ico{ width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+#sfo-root .sfo-coach .sfo-nm{ font-size:16px; font-weight:700; flex-grow:1; }
+#sfo-root .sfo-coach .sfo-cta{ background:none; border:none; padding:0; font-size:14px; font-weight:700; color:var(--sfo-ink); cursor:pointer; }
+#sfo-root .sfo-coach .sfo-desc{ font-size:15px; line-height:1.4; margin-top:6px; }
+#sfo-root .sfo-dots{ display:flex; justify-content:center; gap:8px; padding:2px 0; }
+#sfo-root .sfo-dots span{ width:8px; height:8px; border-radius:50%; background:#d5d1c6; cursor:pointer; }
+#sfo-root .sfo-dots span.sfo-on{ background:var(--sfo-navy); }
+#sfo-root .sfo-full{ margin-top:10px; font-size:15px; line-height:1.55; }
+/* While the compact overview shows, hide the old page title + timeframe pills (it has its own) */
+body.sfo-overview .pagehead{ display:none !important; }
+</style>
 </head>
 <body>
 
@@ -627,6 +700,10 @@
     <div id="view-summary">
 
       <div class="psub-view active" id="pview-overview">
+        <!-- Compact "Wise-style" overview (renders from your existing data functions) -->
+        <div id="sfo-root"></div>
+        <!-- Old overview kept in the DOM (hidden) so existing render functions keep working -->
+        <div id="ov-legacy" hidden aria-hidden="true">
         <div class="week-note hidden" id="week-note">
           <div class="week-note-ico" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9"/></svg>
@@ -690,6 +767,7 @@
           <button type="button" class="collapse-head" onclick="toggleCollapse('col-written')" aria-expanded="false"><span>This period in full</span><span class="chev">▾</span></button>
           <div class="collapse-body"><div id="ai-summary-text"></div></div>
         </div>
+        </div><!-- /#ov-legacy -->
       </div>
 
       <div class="psub-view" id="pview-sessions">
@@ -1027,7 +1105,8 @@ function switchPSub(sub) {
   });
   if (sub === 'sessions') renderParentSessions();
   if (sub === 'ask') renderAskChips(); // re-roll the rotating chip selection each time Ask opens
-  if (sub === 'overview') setTimeout(pcRefreshHeight, 0); // pane heights are unknown while hidden
+  if (sub === 'overview') { setTimeout(pcRefreshHeight, 0); if (window.SFOverview) SFOverview.load(); }
+  document.body.classList.toggle('sfo-overview', currentRole === 'parent' && sub === 'overview');
   setNavActive(sub); setPageTitle(sub);
   document.getElementById('view-summary').scrollTop = 0;
 }
@@ -1560,6 +1639,8 @@ function onTimeframeChange() {
     askHistory = [];
     loadCachedSummary();
   }
+  if (window.SFOverview) SFOverview.load();   // refresh the compact overview
+  document.body.classList.toggle('sfo-overview', currentPSub === 'overview');
 }
 
 /* Subject colours — shared by the pie and its legend */
@@ -1913,6 +1994,192 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } catch(e) {}
 });
+</script>
+<script>
+/* ===== Compact "Wise-style" Overview engine =====
+   Renders into #sfo-root. Reuses your existing data + functions:
+   sessionsInTimeframe(), #stat-sessions/#stat-time (already filled by updateStats),
+   subjColor(), config, generateSummary(), askAbout(), renderSummaryMarkdown().
+   Data (headline/flags/content) comes from the summaries table, same as loadCachedSummary(). */
+window.SFOverview = (function(){
+  const ICO = {
+    star:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9"/></svg>',
+    info:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12" y2="8"/></svg>',
+    bulb:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.3 1 2.1h6c0-.8.4-1.5 1-2.1A6 6 0 0 0 12 3z"/></svg>',
+    alert:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12" y2="17"/></svg>'
+  };
+  const FLAG = {
+    '🚨':{label:'Urgent', tagBg:'var(--sfo-coral)', tagFg:'#fff', ico:ICO.alert,
+          coach:{name:'Check in first', bg:'var(--sfo-coral-tint)', ig:'var(--sfo-coral)', ic:'#fff', coral:true,
+                 q:'You flagged something urgent this period. What exactly was it? Quote the actual message or moment.'}},
+    '⚠️':{label:'Watch', tagBg:'#fbdcd0', tagFg:'#9a3a1c', ico:ICO.info,
+          coach:{name:'Worth knowing', bg:'#eef1f5', ig:'#8a93a6', ic:'#fff',
+                 q:'You flagged a concern this period. What exactly was it? Quote the actual message or moment.'}},
+    '🌟':{label:'Highlight', tagBg:'var(--sfo-gold-tint)', tagFg:'var(--sfo-gold-ink)', ico:ICO.star,
+          coach:{name:'Good sign', bg:'var(--sfo-gold-tint)', ig:'var(--sfo-gold)', ic:'var(--sfo-navy)',
+                 q:'What could I genuinely praise Aden for this period? Keep it concrete.'}},
+    '✅':{label:'All good', tagBg:'var(--sfo-gold-tint)', tagFg:'var(--sfo-gold-ink)', ico:ICO.star, coach:null},
+    '💡':{label:'Idea', tagBg:'var(--sfo-blue-tint)', tagFg:'var(--sfo-blue-ink)', ico:ICO.bulb,
+          coach:{name:'Something to try', bg:'#eaf3ec', ig:'#5aa06e', ic:'#fff',
+                 q:'Give me one concrete thing I could do at home based on this period.'}}
+  };
+  const ORDER = { '🚨':0, '⚠️':1, '🌟':2, '✅':2, '💡':3 };
+
+  let data = null, tab = 0, noteHidden = false, showFull = false;
+
+  const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const color = s => (typeof subjColor==='function' ? subjColor(s) : '#7A8099');
+  function txt(id){ const el=document.getElementById(id); return el ? el.textContent : ''; }
+
+  async function load(){
+    if(!document.getElementById('sfo-root')) return;
+    noteHidden = false; showFull = false;
+
+    const sel = document.getElementById('timeframe-select');
+    const tfLabel = sel ? (sel.options[sel.selectedIndex]||{}).text || 'This week' : 'This week';
+
+    // Sessions + Time: read the numbers your updateStats() already computed (kept identical)
+    const sessions = txt('stat-sessions') || '0';
+    const timeText = txt('stat-time') || '0m';
+
+    // Subject mix from your session data
+    let scope = [];
+    try { scope = (typeof sessionsInTimeframe==='function') ? sessionsInTimeframe() : []; } catch(e){}
+    const counts = {}; scope.forEach(s=>{ const k=s.subject||'General'; counts[k]=(counts[k]||0)+1; });
+    const total = scope.length || 1;
+    const subjects = Object.entries(counts).sort((a,b)=>b[1]-a[1])
+      .map(([label,c])=>({ label, pct:Math.round(c/total*100), color:color(label) }));
+
+    // headline + flags + content from the summaries table (newest row, same as loadCachedSummary)
+    let headline='', content='', flags=[], createdAt=new Date().toISOString();
+    try{
+      const cfg = (typeof config !== 'undefined') ? config : {};
+      const res = await fetch(`${cfg.supabaseUrl}/rest/v1/summaries?order=created_at.desc&limit=1`,
+        { headers:{ apikey:cfg.supabaseKey, Authorization:'Bearer '+cfg.supabaseKey } });
+      const rows = await res.json();
+      const r = rows && rows[0];
+      if(r){ createdAt=r.created_at||createdAt; headline=r.headline||''; content=r.content||'';
+        try{ flags = typeof r.flags==='string' ? JSON.parse(r.flags) : (r.flags||[]); }catch(e){ flags=[]; } }
+    }catch(e){ console.warn('SFOverview load failed', e); }
+
+    data = { tfLabel, createdAt, headline, content, sessions, timeText, subjects, flags };
+    render();
+  }
+
+  function relTime(iso){ if(typeof relativeTime==='function'){ try{ return relativeTime(new Date(iso)); }catch(e){} }
+    const s=Math.max(0,(Date.now()-Date.parse(iso))/1000); if(s<60)return'just now'; const m=(s/60)|0; if(m<60)return m+'m ago'; const h=(m/60)|0; return h<24?h+'h ago':((h/24)|0)+'d ago'; }
+
+  function render(){
+    const root = document.getElementById('sfo-root'); if(!root||!data) return;
+    const d = data;
+
+    const sel = document.getElementById('timeframe-select');
+    const opts = sel ? [...sel.options].map(o=>({v:o.value,l:o.text})) : [{v:'7',l:'This week'}];
+    const cur = sel ? sel.value : '7';
+    const pills = opts.map(o=>`<button class="${o.v===cur?'sfo-on':''}" data-v="${esc(o.v)}">${esc(o.l)}</button>`).join('');
+
+    const note = (d.headline && !noteHidden) ? `
+      <div class="sfo-note">
+        <div class="sfo-note-ico">${ICO.star}</div>
+        <div class="sfo-note-body"><div class="sfo-note-k">The week in a line</div>
+          <div class="sfo-note-t">${esc(d.headline)}</div></div>
+        <button class="sfo-note-x" data-act="note" aria-label="Dismiss note">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button></div>` : '';
+
+    let acc=0; const segs=(d.subjects.length?d.subjects:[{pct:100,color:'#e6e3da'}])
+      .map(x=>{ const s=`${x.color} ${acc}% ${acc+x.pct}%`; acc+=x.pct; return s; }).join(',');
+    const legend = d.subjects.map(x=>`<div class="sfo-row"><span class="sfo-dot" style="background:${x.color}"></span><span>${esc(x.label)}</span><b>${x.pct}%</b></div>`).join('')
+      || '<div class="sfo-muted" style="font-size:15px">No sessions in this period yet.</div>';
+
+    root.innerHTML = `
+      <div class="sfo-titlerow">
+        <div style="flex-grow:1"><h1 class="sfo-h1">How Aden's doing</h1>
+          <div class="sfo-stamp">Updated ${relTime(d.createdAt)} · ${esc(d.tfLabel)}</div></div>
+        <button class="sfo-refresh" data-act="refresh" aria-label="Refresh">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+        </button>
+      </div>
+      <div class="sfo-period">${pills}</div>
+      ${note}
+      <div class="sfo-card">
+        <div class="sfo-ts-head"><div class="sfo-t">Time &amp; subjects</div>
+          <div class="sfo-ts-stats"><div><b>${esc(d.sessions)}</b> <span class="sfo-muted" style="font-size:13px">sessions</span></div>
+            <div><b>${esc(d.timeText)}</b> <span class="sfo-muted" style="font-size:13px">spent</span></div></div></div>
+        <div class="sfo-ts-body">
+          <div class="sfo-donut"><div class="sfo-ring" style="background:conic-gradient(${segs})"></div>
+            <div class="sfo-hole"><b>${d.subjects.length}</b><span class="sfo-muted" style="font-size:11px">Subjects</span></div></div>
+          <div class="sfo-legend">${legend}</div></div>
+      </div>
+      <div class="sfo-tabs">
+        <button class="${tab===0?'sfo-on':''}" data-tab="0">At a glance</button>
+        <button class="${tab===1?'sfo-on':''}" data-tab="1">For you</button>
+      </div>
+      <div class="sfo-pane">${tab===0 ? glance(d) : foryou(d)}</div>
+      <div class="sfo-dots"><span class="${tab===0?'sfo-on':''}" data-tab="0"></span><span class="${tab===1?'sfo-on':''}" data-tab="1"></span></div>`;
+
+    wire(root);
+  }
+
+  function glance(d){
+    const sorted=[...d.flags].sort((a,b)=>(ORDER[a.icon]??9)-(ORDER[b.icon]??9));
+    let html='<div class="sfo-card">', plain=0;
+    if(!sorted.length) html+='<div class="sfo-muted" style="font-size:15px;padding:6px 0">No notes for this period yet — tap ↻ to generate them.</div>';
+    sorted.forEach(f=>{
+      const m=FLAG[f.icon]||FLAG['🌟'];
+      if(f.icon==='🚨'){
+        html+=`<div class="sfo-flag"><span class="sfo-tag" style="background:${m.tagBg};color:${m.tagFg};margin-top:2px">${m.label}</span>
+          <div style="flex-grow:1"><div class="sfo-txt">${esc(f.text)}</div>
+          <button class="sfo-act" data-ask="🚨">See what happened ›</button></div></div>`;
+      }else{
+        if(plain>0) html+='<div class="sfo-div"></div>';
+        html+=`<div class="sfo-grow"><span class="sfo-tag" style="background:${m.tagBg};color:${m.tagFg}">${m.label}</span><div class="sfo-txt">${esc(f.text)}</div></div>`;
+        plain++;
+      }
+    });
+    if(d.content){
+      html+= showFull
+        ? `<div class="sfo-full">${md(d.content)}</div><button class="sfo-fullbtn" data-act="less">Show less ▲</button>`
+        : `<button class="sfo-fullbtn" data-act="full">This period in full ›</button>`;
+    }
+    return html+'</div>';
+  }
+
+  function foryou(d){
+    const cards=d.flags.filter(f=>(FLAG[f.icon]||{}).coach).map(f=>{
+      const c=FLAG[f.icon].coach;
+      return `<div class="sfo-coach" style="background:${c.bg}">
+        <div class="sfo-hd"><div class="sfo-ico" style="background:${c.ig};color:${c.ic}">${FLAG[f.icon].ico}</div>
+          <div class="sfo-nm" style="${c.coral?'color:var(--sfo-coral-dark)':''}">${esc(c.name)}</div>
+          <button class="sfo-cta" style="${c.coral?'color:var(--sfo-coral-dark)':''}" data-ask="${f.icon}">Ask ›</button></div>
+        <div class="sfo-desc">${esc(f.text)}</div></div>`;
+    }).join('');
+    return `<div class="sfo-foryou">${cards||'<div class="sfo-muted" style="font-size:15px;padding:8px">Nothing to action this week.</div>'}</div>`;
+  }
+
+  function md(raw){ if(typeof renderSummaryMarkdown==='function'){ try{ return renderSummaryMarkdown(raw); }catch(e){} }
+    return esc(raw).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>'); }
+
+  function wire(root){
+    root.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{ tab=+el.dataset.tab; render(); });
+    root.querySelectorAll('.sfo-period button').forEach(b=>b.onclick=()=>{
+      if(typeof setTimeframe==='function') setTimeframe(b.dataset.v);   // your fn re-runs onTimeframeChange → reloads this view
+    });
+    root.querySelectorAll('[data-ask]').forEach(b=>b.onclick=()=>{
+      const q=((FLAG[b.dataset.ask]||{}).coach||{}).q || 'Tell me more about this.';
+      if(typeof askAbout==='function') askAbout(q);
+    });
+    root.querySelectorAll('[data-act]').forEach(b=>b.onclick=async()=>{
+      const a=b.dataset.act;
+      if(a==='note'){ noteHidden=true; render(); }
+      else if(a==='full'){ showFull=true; render(); }
+      else if(a==='less'){ showFull=false; render(); }
+      else if(a==='refresh'){ b.style.opacity=.5; try{ if(typeof generateSummary==='function') await generateSummary(); }catch(e){} await load(); }
+    });
+  }
+
+  return { load, render, get data(){ return data; } };
+})();
 </script>
 </body>
 </html>
