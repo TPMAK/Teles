@@ -1,295 +1,1918 @@
-<!--  ═══════════════════════════════════════════════════════════════════
-      STOCKFISH OVERVIEW MODULE  —  collision-proof drop-in
-      ───────────────────────────────────────────────────────────────────
-      WHY YOUR DESKTOP BROKE: the previous paste used global styles
-      (body{}, .phone{}, .card{}, .hidden{}) that overrode your whole app.
-      This version fixes that: every class is prefixed "sfo-" and every
-      CSS rule is scoped under #sfo-root, so it can ONLY affect this widget.
-
-      HOW TO INSTALL (3 steps):
-      1. DELETE the earlier overview <style> block you pasted (the one with
-         body{}, .phone{}, .card{}, .note{}, .tabs{} …). It is what broke
-         desktop. Keep your original app styles.
-      2. Inside your parent Overview view (<div id="pview-overview">…</div>),
-         replace the old overview markup with just:  <div id="sfo-root"></div>
-      3. Paste PART A (style) in <head>, PART B (script) before </body>.
-         Then, in your switchPSub(), add the load call (see PART C).
-      ═══════════════════════════════════════════════════════════════════ -->
-
-
-<!-- ───────────────── PART A · scoped styles (paste in <head>) ───────────────── -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<!-- Non-translucent status bar + no viewport-fit=cover: iOS reserves the
+     status-bar and home-indicator strips itself and the app sits in the safe
+     region between them. This is what makes Odin's bottom nav pin reliably in a
+     standalone PWA. "black-translucent" + viewport-fit=cover extended content
+     into the safe areas and mis-measured the bottom, leaving a large phantom gap
+     under the nav in the installed web app. "black" (vs Odin's "default")
+     keeps a dark status bar with white text to match StockFish's navy top bar. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="StockFish">
+<meta name="theme-color" content="#1C2333">
+<!-- Inline SVG favicon: the StockFish mascot on a marigold tile. Scales crisply
+     at any size and needs no separate file. PNG links below remain as fallback
+     for iOS home-screen / PWA install and browsers that ignore SVG favicons. -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3E%3Crect%20width='100'%20height='100'%20rx='22'%20fill='%23F5A524'/%3E%3Cg%20transform='translate(50,52)%20scale(1.87)%20translate(-32,-33)'%3E%3Cpath%20d='M32%2012c-13%200-21%209-21%2022%200%2011%209%2018%2021%2018s21-7%2021-18c0-13-8-22-21-22z'%20fill='%232A3247'/%3E%3Cpath%20d='M20%2016c-4-3-9-2-10%202%203%201%206%201%209%200z'%20fill='%232A3247'/%3E%3Cpath%20d='M44%2016c4-3%209-2%2010%202-3%201-6%201-9%200z'%20fill='%232A3247'/%3E%3Cpath%20d='M32%2030c-9%200-15%204-15%2012%200%207%207%2010%2015%2010s15-3%2015-10c0-8-6-12-15-12z'%20fill='%23FBF9F4'/%3E%3Cpath%20d='M22%2030c0-1.6%202.2-2.6%204-1.4%201.1.7%201.1%202.1%200%202.8-1.8%201.2-4%20.2-4-1.4z'%20fill='%231C2333'/%3E%3Cpath%20d='M42%2030c0-1.6-2.2-2.6-4-1.4-1.1.7-1.1%202.1%200%202.8%201.8%201.2%204%20.2%204-1.4z'%20fill='%231C2333'/%3E%3Cpath%20d='M28%2038c1.5%201.6%206.5%201.6%208%200'%20fill='none'%20stroke='%231C2333'%20stroke-width='1.6'%20stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>StockFish</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Figtree:wght@400;500;600;700&display=swap">
 <style>
-#sfo-root{ --sfo-navy:#1a2233; --sfo-ink:#1a2233; --sfo-muted:#6b7280; --sfo-line:#e6e3da;
-  --sfo-gold:#f2a01e; --sfo-gold-tint:#fdeecb; --sfo-gold-line:#efd08a; --sfo-gold-ink:#8a5a12;
-  --sfo-coral:#e23d2e; --sfo-coral-dark:#b32619; --sfo-coral-tint:#fbe2dd; --sfo-coral-line:#f2b9b2;
-  --sfo-blue-tint:#d9e4fb; --sfo-blue-ink:#284a86;
-  display:flex; flex-direction:column; gap:10px;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; color:var(--sfo-ink); }
-#sfo-root *{ box-sizing:border-box; }
-#sfo-root .sfo-titlerow{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
-#sfo-root .sfo-h1{ font-size:20px; font-weight:700; line-height:1.15; margin:0; }
-#sfo-root .sfo-stamp{ color:var(--sfo-muted); font-size:11px; margin-top:3px; }
-#sfo-root .sfo-refresh{ flex-shrink:0; width:38px; height:38px; border-radius:50%; background:#fff;
-  border:1px solid var(--sfo-line); color:var(--sfo-ink); display:flex; align-items:center; justify-content:center;
-  cursor:pointer; box-shadow:0 1px 2px rgba(20,34,51,.05); }
-#sfo-root .sfo-period{ display:flex; gap:6px; }
-#sfo-root .sfo-period button{ flex-grow:1; padding:7px 4px; border-radius:20px; border:1px solid var(--sfo-line);
-  background:#fff; color:var(--sfo-ink); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
-#sfo-root .sfo-period button.sfo-on{ background:var(--sfo-navy); color:#fff; border-color:var(--sfo-navy); }
-#sfo-root .sfo-note{ background:var(--sfo-gold-tint); border:1px solid var(--sfo-gold-line); border-radius:14px;
-  padding:11px 13px; display:flex; gap:10px; align-items:flex-start; }
-#sfo-root .sfo-note-ico{ width:22px; height:22px; border-radius:7px; background:var(--sfo-gold); color:var(--sfo-navy);
-  display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
-#sfo-root .sfo-note-k{ font-size:11px; font-weight:700; color:var(--sfo-gold-ink); letter-spacing:.3px; text-transform:uppercase; }
-#sfo-root .sfo-note-t{ font-size:13.5px; line-height:1.35; margin-top:2px; font-weight:500; }
-#sfo-root .sfo-note-x{ background:none; border:none; color:var(--sfo-gold-ink); cursor:pointer; padding:2px; margin:-2px -4px 0 0; flex-shrink:0; display:flex; }
-#sfo-root .sfo-card{ background:#fff; border-radius:16px; padding:13px 16px; box-shadow:0 1px 2px rgba(20,34,51,.05); }
-#sfo-root .sfo-muted{ color:var(--sfo-muted); }
-#sfo-root .sfo-ts-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-#sfo-root .sfo-ts-head .sfo-t{ font-size:15px; font-weight:700; }
-#sfo-root .sfo-ts-stats{ display:flex; gap:14px; align-items:baseline; }
-#sfo-root .sfo-ts-stats b{ font-size:16px; font-weight:700; }
-#sfo-root .sfo-ts-body{ display:flex; align-items:center; gap:16px; }
-#sfo-root .sfo-donut{ position:relative; width:88px; height:88px; flex-shrink:0; }
-#sfo-root .sfo-donut .sfo-ring{ width:88px; height:88px; border-radius:50%; }
-#sfo-root .sfo-donut .sfo-hole{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-  width:56px; height:56px; border-radius:50%; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-#sfo-root .sfo-donut .sfo-hole b{ font-size:19px; font-weight:700; line-height:1; }
-#sfo-root .sfo-legend{ flex-grow:1; display:flex; flex-direction:column; gap:8px; }
-#sfo-root .sfo-legend .sfo-row{ display:flex; align-items:center; gap:8px; font-size:13px; }
-#sfo-root .sfo-legend .sfo-row span:nth-child(2){ flex-grow:1; }
-#sfo-root .sfo-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-#sfo-root .sfo-tabs{ display:flex; border-bottom:1px solid var(--sfo-line); }
-#sfo-root .sfo-tabs button{ flex-grow:1; padding:9px 0 8px; background:none; border:none; border-bottom:2px solid transparent;
-  color:#8a8f9a; font-size:13px; font-weight:500; cursor:pointer; }
-#sfo-root .sfo-tabs button.sfo-on{ color:var(--sfo-ink); font-weight:700; border-bottom-color:var(--sfo-navy); }
-#sfo-root .sfo-tag{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; display:inline-block; height:fit-content; }
-#sfo-root .sfo-grow{ padding:6px 0; display:flex; gap:10px; }
-#sfo-root .sfo-txt{ font-size:13px; line-height:1.4; flex-grow:1; }
-#sfo-root .sfo-div{ height:1px; background:#eee9df; }
-#sfo-root .sfo-flag{ display:flex; gap:11px; padding:11px 12px; border-radius:12px; align-items:flex-start; margin-bottom:8px;
-  background:var(--sfo-coral-tint); border:1px solid var(--sfo-coral-line); }
-#sfo-root .sfo-flag .sfo-txt{ font-size:14px; font-weight:600; }
-#sfo-root .sfo-flag .sfo-act{ margin-top:7px; background:none; border:none; padding:0; font-size:12.5px; font-weight:700; color:var(--sfo-coral-dark); cursor:pointer; }
-#sfo-root .sfo-fullbtn{ margin-top:8px; width:100%; background:#f6f4ee; border:none; border-radius:12px; padding:10px 0; font-size:13px; font-weight:600; color:var(--sfo-ink); cursor:pointer; }
-#sfo-root .sfo-foryou{ display:flex; flex-direction:column; gap:9px; }
-#sfo-root .sfo-coach{ border-radius:14px; padding:11px 14px; }
-#sfo-root .sfo-coach .sfo-hd{ display:flex; align-items:center; gap:8px; }
-#sfo-root .sfo-coach .sfo-ico{ width:22px; height:22px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-#sfo-root .sfo-coach .sfo-nm{ font-size:14px; font-weight:700; flex-grow:1; }
-#sfo-root .sfo-coach .sfo-cta{ background:none; border:none; padding:0; font-size:12px; font-weight:700; color:var(--sfo-ink); cursor:pointer; }
-#sfo-root .sfo-coach .sfo-desc{ font-size:13px; line-height:1.4; margin-top:5px; }
-#sfo-root .sfo-dots{ display:flex; justify-content:center; gap:7px; padding:2px 0; }
-#sfo-root .sfo-dots span{ width:7px; height:7px; border-radius:50%; background:#d5d1c6; cursor:pointer; }
-#sfo-root .sfo-dots span.sfo-on{ background:var(--sfo-navy); }
-#sfo-root .sfo-full{ margin-top:10px; font-size:13px; line-height:1.5; }
-</style>
+  :root {
+    /* ── Warm paper surfaces ── */
+    --bg:#F7F5F1; --surface:#FFFFFF; --surface2:#F1ECE3; --border:#E6DFD2;
+    --text:#1C2333; --text2:#585F73; --text3:#8A8F9E;
 
+    /* ── Ink slate (structure: sidebar, user bubbles, dark UI) ── */
+    --navy:#1C2333; --navy2:#2A3247; --cream:#FBF9F4; --navy-muted:#B8BDCE;
 
-<!-- ───────────────── the container (place inside #pview-overview) ───────────────── -->
-<div id="sfo-root"></div>
+    /* ── Marigold: the primary, friendly, kid-facing accent ── */
+    --gold:#F5A524; --gold-dark:#C97F0C; --gold-tint:#FDEECB; --gold-line:#EFD08A;
 
+    /* ── Coral: RESERVED FOR ALERTS ONLY (concern / urgent flags) ── */
+    --coral:#E23D2E; --coral-dark:#B32619; --coral-tint:#FBE2DD;
 
-<!-- ───────────────── PART B · script (paste before </body>) ───────────────── -->
-<script>
-window.SFOverview = (function(){
-  const ICO = {
-    star:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9"/></svg>',
-    info:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12" y2="8"/></svg>',
-    bulb:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.3 1 2.1h6c0-.8.4-1.5 1-2.1A6 6 0 0 0 12 3z"/></svg>',
-    alert:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12" y2="17"/></svg>'
-  };
-  const FLAG = {
-    '🚨':{label:'Urgent', tagBg:'var(--sfo-coral)', tagFg:'#fff', ico:ICO.alert,
-          coach:{name:'Check in first', bg:'var(--sfo-coral-tint)', ig:'var(--sfo-coral)', ic:'#fff', coral:true,
-                 q:'You flagged something urgent this period. What exactly was it? Quote the actual message or moment.'}},
-    '⚠️':{label:'Watch', tagBg:'#fbdcd0', tagFg:'#9a3a1c', ico:ICO.info,
-          coach:{name:'Worth knowing', bg:'#eef1f5', ig:'#8a93a6', ic:'#fff',
-                 q:'You flagged a concern this period. What exactly was it? Quote the actual message or moment.'}},
-    '🌟':{label:'Highlight', tagBg:'var(--sfo-gold-tint)', tagFg:'var(--sfo-gold-ink)', ico:ICO.star,
-          coach:{name:'Good sign', bg:'var(--sfo-gold-tint)', ig:'var(--sfo-gold)', ic:'var(--sfo-navy)',
-                 q:'What could I genuinely praise Aden for this period? Keep it concrete.'}},
-    '✅':{label:'All good', tagBg:'var(--sfo-gold-tint)', tagFg:'var(--sfo-gold-ink)', ico:ICO.star, coach:null},
-    '💡':{label:'Idea', tagBg:'var(--sfo-blue-tint)', tagFg:'var(--sfo-blue-ink)', ico:ICO.bulb,
-          coach:{name:'Something to try', bg:'#eaf3ec', ig:'#5aa06e', ic:'#fff',
-                 q:'Give me one concrete thing I could do at home based on this period.'}}
-  };
-  const SUBJECT_COLORS = { General:'#8a8ba0', Wellbeing:'#d63c78', Hobbies:'#e8622a', Science:'#e8a81e',
-    Maths:'#3e6be0', Math:'#3e6be0', English:'#7a5cc0', Reading:'#7a5cc0' };
-  const ORDER = { '🚨':0, '⚠️':1, '🌟':2, '✅':2, '💡':3 };
+    /* ── Sky: calm secondary, used on parent side ── */
+    --blue:#3E6BE0; --blue-tint:#DDE8FF; --blue-ink:#1E4093;
 
-  let data = null, tab = 0, noteHidden = false, showFull = false;
+    /* ── Legacy aliases: primary now maps to marigold, not coral ── */
+    --yellow:var(--gold); --yellow-tint:var(--gold-tint); --yellow-line:var(--gold-line);
+    --teal:var(--gold); --purple:var(--blue-ink); --purple-light:var(--blue-tint);
+    --red:var(--coral); --amber:var(--gold-dark);
 
-  const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  function rel(iso){ const s=Math.max(0,(Date.now()-Date.parse(iso))/1000);
-    if(s<60)return'just now'; const m=(s/60)|0; if(m<60)return m+'m ago';
-    const h=(m/60)|0; if(h<24)return h+'h ago'; return ((h/24)|0)+'d ago'; }
-
-  async function load(){
-    noteHidden = false; showFull = false;
-    const sel = document.getElementById('timeframe-select');
-    const tfKey = sel ? sel.value : '7';
-    const tfLabel = sel ? (sel.options[sel.selectedIndex]||{}).text || 'This week' : 'This week';
-
-    // stats from YOUR existing session math
-    let scope = [];
-    try { scope = (typeof sessionsInTimeframe==='function') ? sessionsInTimeframe() : []; } catch(e){}
-    const minutes = Math.round(scope.reduce((a,s)=>a+(s.durationSeconds||s.duration||0),0)/60);
-    const counts = {}; scope.forEach(s=>{ const k=s.subject||'General'; counts[k]=(counts[k]||0)+1; });
-    const total = scope.length || 1;
-    const subjects = Object.entries(counts).sort((a,b)=>b[1]-a[1])
-      .map(([label,c])=>({ label, pct:Math.round(c/total*100), color:SUBJECT_COLORS[label]||'#b8b3a6' }));
-
-    // summary row from Supabase (flags + headline + content)
-    let headline='', content='', flags=[], createdAt=new Date().toISOString();
-    try{
-      const cfg = window.config || {};
-      const res = await fetch(`${cfg.supabaseUrl}/rest/v1/summaries?timeframe=eq.${encodeURIComponent(tfKey)}&order=created_at.desc&limit=1`,
-        { headers:{ apikey:cfg.supabaseKey, Authorization:'Bearer '+cfg.supabaseKey } });
-      const rows = await res.json();
-      const r = rows && rows[0];
-      if(r){ createdAt=r.created_at||createdAt; headline=r.headline||''; content=r.content||'';
-        try{ flags = typeof r.flags==='string' ? JSON.parse(r.flags) : (r.flags||[]); }catch(e){ flags=[]; } }
-    }catch(e){ console.warn('SFOverview load failed', e); }
-
-    data = { timeframe:tfLabel, tfKey, createdAt, headline, content,
-             stats:{ sessions:scope.length, minutes, subjects }, flags };
-    render();
+    --radius:24px; --radius-sm:14px;
+    --shadow:0 1px 3px rgba(28,35,51,0.08), 0 6px 20px rgba(28,35,51,0.06);
+    --shadow-lg:0 18px 50px rgba(28,35,51,0.22);
+    --f-display:'Fraunces', 'Iowan Old Style', Georgia, serif;
+    --f-body:'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
   }
+  /* Fraunces reads best a touch tighter and with a warm optical size */
+  .login-art h1, .login-box h2, .pagehead h1, .card-h,
+  .session-card-title, .overlay-title, .collapse-head,
+  .sb-brand-name, .login-brand, #ai-summary-text .sum-h, .pc-val, .fig-box .val {
+    letter-spacing: -0.01em; font-optical-sizing: auto;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { height: 100%; }
+  /* 100dvh (dynamic viewport height) fills the real visible screen in an iOS
+     standalone PWA -- 100svh/100vh can under-report and leave a cream band below
+     the bottom nav (the home-indicator area painted with the body background). */
+  body { height: 100vh; height: 100dvh; overflow: hidden; }
+  body { font-family: var(--f-body); background: var(--bg); color: var(--text); -webkit-text-size-adjust: 100%; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; -webkit-tap-highlight-color: transparent; }
+  button:disabled { cursor: default; }
+  input, textarea, select { font-family: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  img { max-width: 100%; border-radius: var(--radius-sm); }
+  .hidden { display: none !important; }
+  svg { flex-shrink: 0; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes blink { 0%,100%{opacity:0.25;transform:scale(0.85)} 50%{opacity:1;transform:scale(1)} }
+  @keyframes load { 0%{width:0;margin-left:0} 50%{width:80%;margin-left:10%} 100%{width:0;margin-left:100%} }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
-  function render(){
-    const root = document.getElementById('sfo-root'); if(!root||!data) return;
-    const d = data;
+  .mascot { display: block; width: 100%; height: 100%; line-height: 0; }
+  .mascot svg { width: 100%; height: 100%; display: block; }
+  .tile { background: var(--yellow); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .tile svg { width: 78%; height: 78%; }
 
-    // period pills mirror your <select id="timeframe-select"> options
-    const sel = document.getElementById('timeframe-select');
-    const opts = sel ? [...sel.options].map(o=>({v:o.value,l:o.text})) : [{v:'7',l:'This week'}];
-    const cur = sel ? sel.value : '7';
-    const pills = opts.map(o=>`<button class="${o.v===cur?'sfo-on':''}" data-v="${esc(o.v)}">${esc(o.l)}</button>`).join('');
+  /* ═══ LOGIN ═══ */
+  #login-screen { position: fixed; inset: 0; z-index: 300; background: var(--bg); display: flex; }
+  .login-art { width: 46%; max-width: 560px; background: var(--navy); color: var(--cream); padding: 56px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+  .login-brand { display: flex; align-items: center; gap: 12px; font-family: var(--f-display); font-weight: 700; font-size: 26px; }
+  .login-brand .tile { width: 44px; height: 44px; border-radius: 14px; }
+  .login-hero { position: relative; width: 300px; height: 300px; align-self: center; }
+  .login-hero .ring { position: absolute; inset: 0; border-radius: 50%; background: var(--navy2); }
+  .login-hero .face { position: absolute; inset: 44px; border-radius: 50%; background: var(--cream); padding: 22px; }
+  .login-hero .dot1 { position: absolute; right: 4px; top: 26px; width: 54px; height: 54px; border-radius: 50%; background: var(--yellow); }
+  .login-hero .dot2 { position: absolute; left: 10px; bottom: 26px; width: 30px; height: 30px; border-radius: 50%; background: var(--blue); }
+  .login-art h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(32px, 3.4vw, 46px); line-height: 1.08; margin-bottom: 14px; }
+  .login-art p { font-size: 19px; line-height: 1.5; color: var(--navy-muted); }
+  .login-side { flex: 1; display: flex; align-items: center; justify-content: center; padding: calc(24px + var(--safe-t)) 24px calc(24px + var(--safe-b)); overflow-y: auto; }
+  .login-box { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 24px; padding-bottom: var(--safe-b); }
+  .login-mobile-mascot { display: none; width: 76px; height: 76px; }
+  .login-box h2 { font-family: var(--f-display); font-weight: 700; font-size: 36px; }
+  .login-sub { font-size: 18px; color: var(--text2); margin-top: 6px; }
+  .login-who { display: flex; gap: 12px; }
+  .who-btn { flex: 1; min-height: 44px; padding: 18px; border-radius: 20px; border: 2px solid var(--border); background: var(--surface2); text-align: left; display: flex; flex-direction: column; gap: 12px; transition: border-color .15s, background .15s; }
+  .who-btn.selected { border-color: var(--navy); background: var(--surface); }
+  .who-icon { width: 44px; height: 44px; border-radius: 14px; background: var(--border); display: flex; align-items: center; justify-content: center; }
+  .who-btn.selected .who-icon { background: var(--yellow); }
+  .who-name { font-size: 18px; font-weight: 700; display: block; }
+  .who-desc { font-size: 14px; color: var(--text2); display: block; margin-top: 2px; }
+  .login-field label { display: block; font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .login-field input { width: 100%; height: 56px; padding: 0 18px; border: 2px solid var(--border); border-radius: 16px; background: var(--surface); font-size: 17px; -webkit-appearance: none; }
+  .login-field input:focus { border-color: var(--navy); }
+  .login-error { font-size: 14px; color: var(--coral-dark); min-height: 18px; margin-top: -12px; }
+  .login-btn { height: 58px; border-radius: 16px; background: var(--gold); color: var(--navy); font-size: 19px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 0 var(--gold-dark); }
+  .login-btn:hover { background: #FFB53E; }
+  .login-btn:active { transform: scale(0.98); }
 
-    const note = (d.headline && !noteHidden) ? `
-      <div class="sfo-note">
-        <div class="sfo-note-ico">${ICO.star}</div>
-        <div style="flex-grow:1"><div class="sfo-note-k">The week in a line</div>
-          <div class="sfo-note-t">${esc(d.headline)}</div></div>
-        <button class="sfo-note-x" data-act="note" aria-label="Dismiss note">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-        </button></div>` : '';
+  /* ═══ APP SHELL ═══ */
+  .app { display: flex; height: 100%; width: 100%; }
+  .sidebar { width: 264px; flex-shrink: 0; background: var(--navy); padding: 20px; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; }
+  .sb-brand { display: flex; align-items: center; gap: 12px; padding: 4px 4px 0; }
+  .sb-brand .tile { width: 40px; height: 40px; border-radius: 13px; }
+  .sb-brand-name { font-family: var(--f-display); font-weight: 700; font-size: 22px; color: var(--cream); line-height: 1.1; }
+  .sb-brand-sub { font-size: 13px; color: var(--navy-muted); }
+  .new-session-btn { min-height: 48px; border-radius: 14px; background: var(--gold); color: var(--navy); font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .new-session-btn:hover:not(:disabled) { background: #FFB53E; }
+  .new-session-btn:active:not(:disabled) { transform: scale(0.98); }
+  .sb-nav { display: flex; flex-direction: column; gap: 4px; }
+  .nav-item { min-height: 44px; padding: 0 14px; border-radius: 12px; color: var(--navy-muted); font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 12px; text-align: left; }
+  .nav-item:hover { background: rgba(255,255,255,0.06); }
+  .nav-item.active { background: var(--navy2); color: var(--cream); font-weight: 600; }
+  .sb-user { margin-top: auto; padding: 12px; border-radius: 16px; background: var(--navy2); display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--yellow); color: var(--navy); font-weight: 700; font-size: 17px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .avatar.parent { background: var(--blue-tint); color: var(--blue-ink); }
+  .sb-user-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .sb-user-name { font-size: 15px; font-weight: 700; color: var(--cream); }
+  .role-badge { font-size: 13px; color: var(--navy-muted); }
+  .icon-btn { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--navy-muted); flex-shrink: 0; }
+  .icon-btn:hover { background: rgba(255,255,255,0.08); }
 
-    // donut
-    let acc=0; const stops=(d.stats.subjects.length?d.stats.subjects:[{pct:100,color:'#e6e3da'}])
-      .map(x=>{ const seg=`${x.color} ${acc}% ${acc+x.pct}%`; acc+=x.pct; return seg; }).join(',');
-    const legend = d.stats.subjects.map(x=>`<div class="sfo-row"><span class="sfo-dot" style="background:${x.color}"></span><span>${esc(x.label)}</span><b>${x.pct}%</b></div>`).join('')
-      || '<div class="sfo-muted" style="font-size:13px">No sessions in this period yet.</div>';
+  .main { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; position: relative; }
+  .topbar { display: none; height: calc(64px + var(--safe-t)); padding: var(--safe-t) 16px 0; background: var(--navy); align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .topbar .sb-brand { padding: 0; gap: 10px; }
+  .topbar .tile { width: 36px; height: 36px; border-radius: 12px; }
+  .topbar .sb-brand-name { font-size: 18px; }
+  .topbar-right { display: flex; align-items: center; gap: 4px; }
+  .topbar .new-session-btn { width: 44px; min-height: 44px; height: 44px; padding: 0; border-radius: 14px; }
+  .pagehead { padding: 28px 40px 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-shrink: 0; }
+  .pagehead h1 { font-family: var(--f-display); font-weight: 700; font-size: 34px; line-height: 1.1; }
+  .ph-sub { font-size: 16px; color: var(--text2); margin-top: 6px; }
+  #session-count:not(:empty)::before { content: ' · '; }
+  .tf { padding: 4px; border-radius: 16px; background: var(--surface2); display: flex; gap: 2px; flex-shrink: 0; }
+  .tf-btn { min-height: 44px; padding: 0 18px; border-radius: 12px; color: var(--text2); font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .tf-btn.active { background: var(--surface); color: var(--text); font-weight: 700; box-shadow: var(--shadow); }
 
-    const pane = tab===0 ? glance(d) : foryou(d);
+  .bottomnav { display: none; height: calc(72px + var(--safe-b)); padding: 6px 16px calc(14px + var(--safe-b)); border-top: 1px solid var(--border); background: var(--surface); gap: 8px; flex-shrink: 0; }
+  .tab-item { flex: 1; border-radius: 14px; color: var(--text2); font-size: 13px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .tab-item.active { background: var(--coral-tint); color: var(--coral-dark); font-weight: 700; }
 
-    root.innerHTML = `
-      <div class="sfo-titlerow">
-        <div style="flex-grow:1"><h1 class="sfo-h1">How Aden's doing</h1>
-          <div class="sfo-stamp">Updated ${rel(d.createdAt)} · ${esc(d.timeframe)}</div></div>
-        <button class="sfo-refresh" data-act="refresh" aria-label="Refresh">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+  /* ═══ CHAT ═══ */
+  #view-chat { display: flex; flex-direction: column; flex: 1; min-height: 0; border-top: 1px solid var(--border); }
+  .messages { flex: 1; overflow-y: auto; padding: 28px 40px 12px; display: flex; flex-direction: column; gap: 18px; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+  .messages > * { width: 100%; max-width: 760px; margin-left: auto; margin-right: auto; flex-shrink: 0; }
+  .msg { display: flex; align-items: flex-end; gap: 12px; animation: fadeUp 0.2s ease; }
+  .msg.user { flex-direction: row-reverse; }
+  .msg-avatar { width: 40px; height: 40px; border-radius: 13px; flex-shrink: 0; background: var(--yellow); display: flex; align-items: center; justify-content: center; padding: 4px; font-weight: 700; }
+  .msg.user .msg-avatar { display: none; }
+  .msg > :not(.msg-avatar) { max-width: min(78%, 600px); min-width: 0; }
+  .msg-bubble { width: fit-content; max-width: 100%; padding: 14px 18px; border-radius: 20px 20px 20px 6px; background: var(--surface); border: 1px solid var(--border); line-height: 1.55; font-size: 17px; overflow-wrap: anywhere; }
+  .msg.user .msg-bubble { background: var(--navy); border-color: var(--navy); color: var(--cream); border-radius: 20px 20px 6px 20px; margin-left: auto; }
+  .msg-bubble p { margin-bottom: 8px; }
+  .msg-bubble p:last-child { margin-bottom: 0; }
+  .msg-bubble strong { font-weight: 700; }
+  .msg-img { margin-top: 8px; max-width: 220px; border-radius: 10px; display: block; }
+  .msg-time { font-size: 12px; color: var(--text3); margin-top: 4px; }
+  .msg.user .msg-time { text-align: right; }
+  .session-divider { display: flex; align-items: center; gap: 10px; }
+  .session-divider-line { flex: 1; height: 1px; background: var(--border); }
+  .session-divider-label { font-size: 13px; color: var(--text3); white-space: nowrap; }
+  .thinking { display: flex; gap: 5px; align-items: center; padding: 6px 0; }
+  .thinking span { width: 8px; height: 8px; border-radius: 50%; background: var(--navy); opacity: 0.3; animation: blink 1.2s infinite; }
+  .thinking span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking span:nth-child(3) { animation-delay: 0.4s; }
+
+  .input-area { padding: 8px 40px calc(20px + var(--safe-b)); flex-shrink: 0; }
+  .input-area > * { max-width: 760px; margin-left: auto; margin-right: auto; }
+  .quick { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; }
+  .quick::-webkit-scrollbar { display: none; }
+  .quick-btn { min-height: 44px; padding: 0 18px; border-radius: 22px; border: 1.5px solid var(--border); background: var(--surface); font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .quick-btn:hover { border-color: var(--navy); }
+  .quick-btn:disabled { opacity: 0.5; }
+  .photo-preview-wrap { margin-bottom: 8px; position: relative; display: inline-block; }
+  .photo-preview-wrap img { max-height: 80px; border-radius: 10px; display: block; }
+  .photo-remove { position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border-radius: 50%; background: var(--coral); color: #fff; font-size: 13px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .composer { padding: 10px 10px 10px 12px; border-radius: 24px; border: 2px solid var(--border); background: var(--surface); display: flex; align-items: flex-end; gap: 10px; }
+  .composer:focus-within { border-color: var(--navy); }
+  .btn-photo { width: 48px; height: 48px; border-radius: 16px; background: var(--surface2); color: var(--text2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .input-box { flex: 1; min-width: 0; border: none; outline: none; resize: none; background: transparent; font-size: 17px; line-height: 1.4; padding: 12px 4px; min-height: 48px; max-height: 120px; -webkit-appearance: none; }
+  .input-box::placeholder { color: var(--text3); }
+  .btn-send { width: 48px; height: 48px; border-radius: 16px; background: var(--gold); color: var(--navy); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform .1s, background .12s; }
+  .btn-send:hover:not(:disabled) { background: #FFB53E; }
+  .btn-send:active:not(:disabled) { transform: scale(0.94); }
+  .btn-send:disabled, .btn-photo:disabled { opacity: 0.4; }
+  .input-note { text-align: center; font-size: 13px; color: var(--text3); margin-top: 10px; }
+
+  /* ═══ SHARED CARDS / BADGES ═══ */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 28px; }
+  .card-h { font-family: var(--f-display); font-weight: 700; font-size: 22px; }
+  .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .card-sub { font-size: 14px; color: var(--text2); }
+  .badge { font-size: 13px; font-weight: 700; padding: 3px 12px; border-radius: 20px; background: #EFE8D8; color: #3B4058; white-space: nowrap; }
+  .badge.maths { background: #DCE8FF; color: #1B3F8F; }
+  .badge.reading { background: #DDF3D2; color: #1F5A14; }
+  .badge.writing { background: #E6E0FF; color: #3F2FA0; }
+  .badge.science { background: #FFE7B8; color: #7A4300; }
+  .badge.wellbeing { background: #FFDDE6; color: #8A1E44; }
+  .badge.hobbies { background: #FFE0D1; color: #8A3210; }
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--text2); grid-column: 1 / -1; }
+  .empty-state .big { width: 72px; height: 72px; margin: 0 auto 12px; }
+  .empty-state p { font-size: 16px; line-height: 1.6; }
+
+  /* ═══ HISTORY ═══ */
+  #view-history { flex: 1; overflow-y: auto; padding: 8px 40px 40px; display: none; flex-direction: column; gap: 20px; -webkit-overflow-scrolling: touch; }
+  .hist-search { position: relative; flex-shrink: 0; }
+  .hist-search input { width: 100%; min-height: 48px; padding: 0 44px 0 46px; border-radius: 24px; border: 1.5px solid var(--border); background: var(--surface); font-size: 16px; font-weight: 500; font-family: inherit; color: var(--text1); }
+  .hist-search input::placeholder { color: var(--text3); font-weight: 500; }
+  .hist-search input:focus { outline: none; border-color: var(--navy); }
+  .hist-search .hs-ico { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; }
+  .hist-search .hs-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 50%; border: none; background: transparent; color: var(--text3); font-size: 20px; line-height: 1; cursor: pointer; display: none; }
+  .hist-search .hs-clear.show { display: flex; align-items: center; justify-content: center; }
+  .filters { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+  .filters::-webkit-scrollbar { display: none; }
+  .pill { min-height: 44px; padding: 0 18px; border-radius: 22px; border: 1.5px solid var(--border); background: var(--surface); font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .pill.active { background: var(--navy); border-color: var(--navy); color: var(--cream); font-weight: 700; }
+  .history-count { font-size: 14px; color: var(--text3); }
+  #session-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .session-card { padding: 20px 22px; border-radius: 22px; background: var(--surface); border: 1px solid var(--border); cursor: pointer; display: flex; flex-direction: column; gap: 10px; text-align: left; transition: border-color .15s, transform .15s; }
+  .session-card:hover { border-color: var(--navy); }
+  .session-card:active { transform: scale(0.99); }
+  .sc-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .sc-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .session-card-date { font-size: 14px; color: var(--text2); white-space: nowrap; }
+  .session-card-title { font-family: var(--f-display); font-weight: 700; font-size: 20px; line-height: 1.25; }
+  .session-preview { font-size: 15px; line-height: 1.5; color: var(--text2); }
+  .session-msg-count { font-size: 13px; color: var(--text3); }
+
+  /* ═══ PARENT ═══ */
+  #view-summary { flex: 1; overflow-y: auto; padding: 8px 40px 40px; display: none; flex-direction: column; gap: 24px; -webkit-overflow-scrolling: touch; }
+  .psub-view { display: none; flex-direction: column; gap: 24px; }
+  .psub-view.active { display: flex; animation: fadeUp 0.2s ease; }
+  /* Ask tab fills the summary view so its thread scrolls, not the whole page */
+  #pview-ask.active { flex: 1 1 auto; min-height: 0; }
+  .glance-grid { display: flex; gap: 32px; align-items: center; flex-wrap: wrap; }
+  .pie-wrap { flex-shrink: 0; width: 168px; height: 168px; position: relative; }
+  .pie-wrap svg { width: 100%; height: 100%; display: block; transform: rotate(-90deg); }
+  .pie-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+  .pie-center .pc-val { font-family: var(--f-display); font-weight: 700; font-size: 36px; line-height: 1; }
+  .pie-center .pc-lbl { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .pie-side { flex: 1; min-width: 240px; display: flex; align-items: center; gap: 48px; flex-wrap: wrap; }
+  .pie-figures { display: flex; gap: 10px; }
+  .fig-box { min-width: 140px; background: var(--bg); border-radius: 14px; padding: 12px 16px; }
+  .fig-box .val { font-family: var(--f-display); font-weight: 700; font-size: 26px; line-height: 1.1; }
+  .fig-box .lbl { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .pie-legend { display: flex; flex-direction: column; gap: 8px; width: 240px; max-width: 100%; }
+  .legend-item { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 4px; flex-shrink: 0; }
+  .legend-item .lg-count { margin-left: auto; color: var(--text2); font-weight: 600; }
+  .pie-empty { color: var(--text3); font-size: 15px; }
+
+  /* ── Swipeable pair: "For you" (recommendations) ⇄ "At a glance" (summary).
+     Segmented buttons drive it on desktop; touch drag drives it on phones. ── */
+  .pcarousel { display: flex; flex-direction: column; }
+  .pctabs { display: flex; gap: 6px; padding: 5px; background: var(--surface2); border-radius: 16px; margin-bottom: 16px; }
+  .pctab { flex: 1; min-height: 44px; border-radius: 12px; font-size: 15px; font-weight: 700; color: var(--text2); display: flex; align-items: center; justify-content: center; gap: 8px; transition: background .15s, color .15s; }
+  .pctab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .pctab .pctab-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold-dark); }
+  .pcviewport { overflow: hidden; touch-action: pan-y; transition: height .3s cubic-bezier(.4,0,.2,1); }
+  .pctrack { display: flex; align-items: flex-start; transition: transform .32s cubic-bezier(.4,0,.2,1); will-change: transform; }
+  .pctrack.dragging { transition: none; }
+  .pcpane { min-width: 100%; width: 100%; }
+  .pcdots { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
+  .pcdot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); border: none; padding: 0; transition: background .2s, width .2s; }
+  .pcdot.active { background: var(--gold-dark); width: 22px; border-radius: 5px; }
+
+  .att-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: stretch; }
+  .att-grid.one { grid-template-columns: 1fr; }
+  .att { padding: 24px; border-radius: 24px; background: var(--surface); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px; }
+  .att.good { background: var(--yellow-tint); border-color: var(--yellow-line); }
+  .att.urgent { background: var(--coral-tint); border-color: #F2B5B0; }
+  .att.idea { grid-column: 1 / -1; }
+  .att-head { display: flex; align-items: center; gap: 12px; }
+  .att-ico { width: 36px; height: 36px; border-radius: 12px; background: var(--surface2); display: flex; align-items: center; justify-content: center; }
+  .att.good .att-ico { background: var(--yellow); }
+  .att.urgent .att-ico { background: var(--coral); color: #fff; }
+  .att-title { font-size: 17px; font-weight: 700; }
+  .att-text { font-size: 17px; line-height: 1.5; }
+  .att-foot { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .att.good .att-foot { border-top-color: var(--yellow-line); }
+  .att-foot-l { font-size: 14px; color: var(--text2); }
+  .att-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sg-btn { min-height: 44px; padding: 0 18px; border-radius: 14px; font-size: 15px; font-weight: 700; }
+  .sg-btn.primary { background: var(--navy); color: var(--cream); }
+  .sg-btn.ghost { background: var(--surface); color: var(--text); border: 1.5px solid var(--navy); }
+  .sg-btn:active { transform: scale(0.97); }
+
+  .flag-list { display: flex; flex-direction: column; gap: 16px; }
+  .flag-item { display: flex; gap: 14px; align-items: flex-start; font-size: 16px; line-height: 1.5; }
+  .flag-tag { width: 84px; flex-shrink: 0; text-align: center; padding: 4px 0; border-radius: 20px; font-size: 13px; font-weight: 700; background: #EFE8D8; color: #3B4058; }
+  .flag-tag.hl { background: #FFE7A8; color: #6B4200; }
+  .flag-tag.idea { background: var(--blue-tint); color: var(--blue-ink); }
+  .flag-tag.urgent { background: var(--coral-tint); color: var(--coral-dark); }
+  /* Emphasise an urgent flag inside "At a glance" */
+  .flag-item.urgent { background: var(--coral-tint); border: 1px solid #F2B5B0; border-radius: 14px; padding: 12px 14px; }
+  .flag-item.urgent > span:last-child { font-weight: 600; }
+
+  /* "Week in a line" dismissible note */
+  .week-note { display: flex; gap: 12px; align-items: flex-start; background: var(--gold-tint);
+    border: 1px solid var(--gold-line); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 16px; }
+  .week-note-ico { width: 26px; height: 26px; border-radius: 8px; background: var(--gold); color: var(--navy);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .week-note-body { flex-grow: 1; }
+  .week-note-k { font-size: 12px; font-weight: 700; color: var(--gold-dark); letter-spacing: .4px; text-transform: uppercase; }
+  .week-note-t { font-size: 16px; line-height: 1.4; margin-top: 3px; font-weight: 500; color: var(--text); }
+  .week-note-x { background: none; border: none; color: var(--gold-dark); cursor: pointer; padding: 4px; margin: -4px -6px 0 0; flex-shrink: 0; min-height: 32px; }
+
+  .refresh-btn { margin-top: 18px; min-height: 44px; padding: 0 18px; border-radius: 22px; border: 1.5px solid var(--border); background: var(--surface); font-size: 15px; font-weight: 600; }
+  .refresh-btn:disabled { opacity: 0.5; }
+  .loading-bar { height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .loading-bar-fill { height: 100%; background: var(--gold-dark); border-radius: 2px; animation: load 1.8s ease-in-out infinite; }
+
+  /* ── Parent portal splash: shown for a couple of seconds while the
+     first data load runs, so the portal never opens on an empty page ── */
+  #parent-loading { position: fixed; inset: 0; z-index: 250; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+    padding: 32px; text-align: center; opacity: 1; transition: opacity 0.4s ease; }
+  #parent-loading.fade { opacity: 0; pointer-events: none; }
+  #parent-loading .pl-mascot { width: 84px; height: 84px; display: block; animation: plbob 2.4s ease-in-out infinite; }
+  #parent-loading .pl-mascot svg { width: 100%; height: 100%; display: block; }
+  #parent-loading .pl-title { font-family: var(--f-display); font-weight: 700; font-size: 22px; color: var(--text); }
+  #parent-loading .pl-sub { font-size: 15px; color: var(--text2); max-width: 260px; line-height: 1.5; }
+  #parent-loading .pl-bar { width: 180px; max-width: 60vw; }
+  @keyframes plbob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+  /* ── Pull-to-refresh indicator (mobile: pull a scrolled-to-top view down) ── */
+  .ptr-indicator { position: absolute; top: 0; left: 50%; z-index: 40;
+    width: 38px; height: 38px; border-radius: 50%; background: var(--surface);
+    box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center;
+    color: var(--gold-dark); opacity: 0; pointer-events: none;
+    transform: translate(-50%, -48px); }
+  .ptr-indicator svg { width: 20px; height: 20px; }
+  .ptr-indicator.spinning svg { animation: ptrspin 0.7s linear infinite; }
+  @keyframes ptrspin { to { transform: rotate(360deg); } }
+  .collapse { border: 1px solid var(--border); border-radius: 24px; background: var(--surface); overflow: hidden; }
+  .collapse-head { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 20px 28px; font-family: var(--f-display); font-weight: 700; font-size: 20px; text-align: left; min-height: 44px; }
+  .collapse-head .chev { color: var(--text3); transition: transform 0.2s; font-size: 14px; }
+  .collapse.open .chev { transform: rotate(180deg); }
+  .collapse-body { display: none; padding: 0 28px 24px; }
+  .collapse.open .collapse-body { display: block; }
+  #ai-summary-text { font-size: 16px; line-height: 1.6; }
+  #ai-summary-text .sum-h { font-family: var(--f-display); font-size: 18px; font-weight: 700; margin: 20px 0 8px; }
+  #ai-summary-text .sum-h:first-child { margin-top: 0; }
+  #ai-summary-text .sum-p { margin: 0 0 10px; }
+  #ai-summary-text .sum-ul { margin: 0 0 14px; display: flex; flex-direction: column; gap: 9px; list-style: none; }
+  #ai-summary-text .sum-ul li { padding-left: 18px; position: relative; }
+  #ai-summary-text .sum-ul li::before { content: ''; position: absolute; left: 3px; top: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--gold-dark); }
+  #ai-summary-text .sum-hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+  .prow-list { padding: 8px 28px; }
+  .prow { width: 100%; min-height: 96px; padding: 18px 0; border-bottom: 1px solid #EFE8D8; display: flex; align-items: center; gap: 20px; text-align: left; }
+  .prow:last-child { border-bottom: none; }
+  .prow-badges { width: 96px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+  .prow-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .prow-title { font-size: 18px; font-weight: 700; }
+  .prow-prev { font-size: 15px; line-height: 1.45; color: var(--text2); }
+  .prow-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; text-align: right; }
+  .prow-when { font-size: 14px; font-weight: 600; }
+  .prow-count { font-size: 13px; color: var(--text2); }
+
+  .ask-wrap { width: 100%; max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; flex: 1 1 auto; min-height: 0; }
+  .ask-intro { font-size: 16px; color: var(--text2); }
+  .ask-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ask-chip { min-height: 44px; padding: 0 16px; border-radius: 22px; background: var(--blue-tint); color: var(--blue-ink); font-size: 15px; font-weight: 600; text-align: left; }
+  .ask-chip:hover { outline: 2px solid var(--blue-ink); }
+  .ask-chip:disabled { opacity: 0.5; }
+  #ask-thread { display: flex; flex-direction: column; gap: 16px; flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  #ask-thread:empty { flex: 0 0 auto; }
+  .ask-msg { display: flex; }
+  .ask-msg.parent { justify-content: flex-end; }
+  .ask-bubble { max-width: 88%; padding: 14px 18px; font-size: 16px; line-height: 1.55; }
+  .ask-msg.parent .ask-bubble { background: var(--navy); color: var(--cream); border-radius: 20px 20px 6px 20px; font-size: 17px; }
+  .ask-msg.assistant .ask-bubble { background: var(--surface); border: 1px solid var(--border); border-radius: 20px 20px 20px 6px; padding: 20px 22px; }
+  .ask-msg.assistant .sum-h { font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text2); margin: 16px 0 4px; }
+  .ask-msg.assistant .sum-h:first-child { margin-top: 0; }
+  .ask-msg.assistant .sum-p { margin: 0 0 8px; }
+  .ask-msg.assistant .sum-ul { margin: 0 0 10px; display: flex; flex-direction: column; gap: 8px; list-style: none; }
+  .ask-msg.assistant .sum-ul li { padding-left: 18px; position: relative; }
+  .ask-msg.assistant .sum-ul li::before { content: ''; position: absolute; left: 3px; top: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--gold-dark); }
+  .ask-composer { flex: 0 0 auto; padding: 12px 0 calc(4px + var(--safe-b)); background: var(--bg); display: flex; gap: 10px; align-items: flex-end; }
+  #ask-input { flex: 1; min-width: 0; min-height: 56px; max-height: 120px; resize: none; padding: 15px 20px; border: 2px solid var(--border); border-radius: 18px; background: var(--surface); font-size: 17px; line-height: 1.4; -webkit-appearance: none; }
+  #ask-input:focus { border-color: var(--navy); outline: none; }
+  .ask-btn { height: 56px; padding: 0 28px; border-radius: 18px; background: var(--navy); color: var(--cream); font-size: 16px; font-weight: 700; }
+  .ask-btn:disabled { opacity: 0.5; }
+
+  /* ═══ OVERLAY ═══ */
+  .overlay { position: fixed; inset: 0; background: rgba(31,37,64,0.55); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .overlay-panel { background: var(--bg); border-radius: 24px; width: 100%; max-width: 760px; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-lg); }
+  .overlay-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-shrink: 0; background: var(--surface); }
+  .overlay-title { font-family: var(--f-display); font-weight: 700; font-size: 22px; }
+  .overlay-meta { font-size: 14px; color: var(--text2); margin-top: 2px; }
+  .overlay-actions { display: flex; align-items: center; gap: 8px; }
+  .overlay-close { width: 44px; height: 44px; border-radius: 14px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text2); }
+  .overlay-continue { min-height: 44px; padding: 0 18px; border-radius: 14px; background: var(--gold); color: var(--navy); font-size: 15px; font-weight: 700; }
+  .overlay-continue:hover { background: #FFB53E; }
+  .overlay-messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; -webkit-overflow-scrolling: touch; }
+
+  /* ═══ MOBILE ═══ */
+  @media (max-width: 860px) {
+    .login-art { display: none; }
+    .login-mobile-mascot { display: block; }
+    .login-box h2 { font-size: 30px; }
+    .sidebar { display: none; }
+    /* Pin the whole app shell to the real visual viewport (same trick
+       #login-screen already uses reliably). The height:100% inheritance chain
+       (body 100dvh -> .app -> .main) under-resolved in the iOS standalone PWA,
+       ending the flex column short and floating the bottom nav above the
+       physical bottom. Fixing inset:0 bypasses that chain so the nav's flex
+       position lands on the true screen bottom, above the home indicator. */
+    .app { position: fixed; inset: 0; }
+    /* Keep the rubber-band bounce inside each scroll view. Without this, an
+       over-scroll on iOS drags the whole fixed app, so the pinned top/bottom
+       bars visibly detach from the screen edges. */
+    .messages, #view-history, #view-summary, #ask-thread, .overlay-messages { overscroll-behavior-y: contain; }
+    .topbar { display: flex; }
+    .bottomnav { display: flex; }
+    .pagehead { padding: 16px 16px 12px; flex-direction: column; align-items: stretch; gap: 12px; }
+    .pagehead h1 { font-size: 26px; }
+    .ph-sub { font-size: 14px; margin-top: 4px; }
+    .tf { background: none; padding: 0; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+    .tf::-webkit-scrollbar { display: none; }
+    .tf-btn { border: 1.5px solid var(--border); background: var(--surface); border-radius: 22px; }
+    .tf-btn.active { background: var(--navy); border-color: var(--navy); color: var(--cream); box-shadow: none; }
+    .messages { padding: 16px 16px 8px; gap: 14px; }
+    .msg { gap: 8px; }
+    .msg-avatar { width: 32px; height: 32px; border-radius: 11px; padding: 3px; }
+    .msg > :not(.msg-avatar) { max-width: 82%; }
+    .msg-bubble { padding: 12px 15px; font-size: 16px; border-radius: 18px 18px 18px 5px; }
+    .msg.user .msg-bubble { border-radius: 18px 18px 5px 18px; }
+    .input-area { padding: 8px 16px 12px; }
+    .composer { border-radius: 22px; padding: 6px 6px 6px 8px; gap: 8px; }
+    .btn-photo, .btn-send { width: 44px; height: 44px; border-radius: 14px; }
+    .input-box { min-height: 44px; padding: 10px 4px; font-size: 16px; }
+    .input-note { display: none; }
+    #view-history, #view-summary { padding: 4px 16px 20px; gap: 16px; }
+    .psub-view { gap: 16px; }
+    #session-list { grid-template-columns: 1fr; gap: 12px; }
+    .session-card { padding: 16px 18px; border-radius: 20px; gap: 8px; }
+    .session-card-title { font-size: 18px; }
+    .card { padding: 18px; border-radius: 22px; }
+    .card-h { font-size: 20px; }
+    .glance-grid { gap: 18px; }
+    .pie-wrap { width: 120px; height: 120px; }
+    .pie-center .pc-val { font-size: 28px; }
+    .pie-side { min-width: 0; gap: 16px; flex-direction: column; align-items: stretch; }
+    .pie-figures { width: 100%; }
+    .fig-box { flex: 1; min-width: 0; }
+    .pie-legend { width: 100%; }
+    .att-grid { grid-template-columns: 1fr; gap: 14px; }
+    .att { padding: 18px; border-radius: 22px; gap: 10px; }
+    .att-text { font-size: 16px; }
+    .att-foot { flex-direction: column; align-items: flex-start; }
+    .prow-list { padding: 4px 18px; }
+    .prow { flex-wrap: wrap; gap: 8px 12px; padding: 14px 0; }
+    .prow-badges { width: auto; flex-direction: row; }
+    .prow-main { flex-basis: 100%; order: 3; }
+    .prow-side { flex-direction: row; align-items: center; margin-left: auto; gap: 8px; }
+    .collapse-head { padding: 16px 18px; }
+    .collapse-body { padding: 0 18px 18px; }
+    .flag-tag { width: 72px; }
+    .ask-composer { padding-bottom: calc(4px + var(--safe-b)); }
+    #ask-input { min-height: 48px; padding: 12px 16px; border-radius: 16px; }
+    .ask-btn { height: 48px; padding: 0 20px; border-radius: 16px; }
+    .overlay { padding: 0; align-items: flex-end; }
+    .overlay-panel { border-radius: 24px 24px 0 0; max-height: 90vh; padding-bottom: var(--safe-b); }
+    .overlay-messages { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-art">
+    <div class="login-brand"><span class="tile js-mascot" style="width:44px;height:44px;border-radius:14px"></span>StockFish</div>
+    <div class="login-hero"><div class="ring"></div><div class="face" id="login-mascot"></div><div class="dot1"></div><div class="dot2"></div></div>
+    <div>
+      <h1>Stuck? Let's figure it out together.</h1>
+      <p>Your study buddy for maths, reading, writing and more. It asks the questions, so you do the thinking.</p>
+    </div>
+  </div>
+  <div class="login-side">
+    <div class="login-box">
+      <span class="login-mobile-mascot js-mascot-plain"></span>
+      <div>
+        <h2>Welcome back</h2>
+        <p class="login-sub">Who's logging in?</p>
+      </div>
+      <div class="login-who">
+        <button type="button" class="who-btn selected" id="who-aden" onclick="selectWho('aden')" aria-pressed="true">
+          <span class="who-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"/></svg></span>
+          <span><span class="who-name">Student</span><span class="who-desc">Chat with your tutor</span></span>
+        </button>
+        <button type="button" class="who-btn" id="who-parent" onclick="selectWho('parent')" aria-pressed="false">
+          <span class="who-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.2a5.5 5.5 0 0 1 4.5 5.3"/></svg></span>
+          <span><span class="who-name">Parent</span><span class="who-desc">See how they're doing</span></span>
         </button>
       </div>
-      <div class="sfo-period">${pills}</div>
-      ${note}
-      <div class="sfo-card">
-        <div class="sfo-ts-head"><div class="sfo-t">Time &amp; subjects</div>
-          <div class="sfo-ts-stats"><div><b>${d.stats.sessions}</b> <span class="sfo-muted" style="font-size:11px">sessions</span></div>
-            <div><b>${d.stats.minutes}m</b> <span class="sfo-muted" style="font-size:11px">spent</span></div></div></div>
-        <div class="sfo-ts-body">
-          <div class="sfo-donut"><div class="sfo-ring" style="background:conic-gradient(${stops})"></div>
-            <div class="sfo-hole"><b>${d.stats.subjects.length}</b><span class="sfo-muted" style="font-size:10px">Subjects</span></div></div>
-          <div class="sfo-legend">${legend}</div></div>
+      <div class="login-field">
+        <label for="login-pw">Password</label>
+        <input type="password" id="login-pw" placeholder="Type your password" onkeydown="if(event.key==='Enter') doLogin()" autocomplete="current-password">
       </div>
-      <div class="sfo-tabs">
-        <button class="${tab===0?'sfo-on':''}" data-tab="0">At a glance</button>
-        <button class="${tab===1?'sfo-on':''}" data-tab="1">For you</button>
-      </div>
-      <div>${pane}</div>
-      <div class="sfo-dots"><span class="${tab===0?'sfo-on':''}" data-tab="0"></span><span class="${tab===1?'sfo-on':''}" data-tab="1"></span></div>`;
+      <div class="login-error" id="login-error" role="alert"></div>
+      <button type="button" class="login-btn" onclick="doLogin()">Let's go <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </div>
+  </div>
+</div>
 
-    wire(root);
+<!-- APP -->
+<div class="app" id="main-app" style="display:none">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <span class="tile js-mascot" style="width:40px;height:40px;border-radius:13px"></span>
+      <div><div class="sb-brand-name">StockFish</div><div class="sb-brand-sub" id="brand-sub"></div></div>
+    </div>
+    <button type="button" class="new-session-btn js-new" id="new-session-btn" onclick="startNewSession()">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New session
+    </button>
+    <nav class="sb-nav" id="sb-nav" aria-label="Main"></nav>
+    <div class="sb-user">
+      <div class="avatar" id="user-avatar">A</div>
+      <div class="sb-user-text"><span class="sb-user-name" id="user-name">Aden</span><span class="role-badge" id="role-badge">Student</span></div>
+      <button type="button" class="icon-btn" onclick="logout()" aria-label="Log out">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="ptr-indicator" id="ptr-indicator" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v5h-5"/></svg>
+    </div>
+    <header class="topbar">
+      <div class="sb-brand"><span class="tile js-mascot"></span><span class="sb-brand-name">StockFish</span></div>
+      <div class="topbar-right">
+        <button type="button" class="new-session-btn js-new" onclick="startNewSession()" aria-label="New session">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button type="button" class="icon-btn" onclick="logout()" aria-label="Log out">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <header class="pagehead">
+      <div>
+        <h1 id="page-title">Today's session</h1>
+        <div class="ph-sub"><span id="session-status">Ready to learn</span><span id="session-count"></span></div>
+      </div>
+      <div class="tf hidden" id="tf-pills" role="group" aria-label="Timeframe">
+        <button type="button" class="tf-btn active" data-v="7" onclick="setTimeframe('7')">This week</button>
+        <button type="button" class="tf-btn" data-v="14" onclick="setTimeframe('14')">2 weeks</button>
+        <button type="button" class="tf-btn" data-v="30" onclick="setTimeframe('30')">This month</button>
+        <button type="button" class="tf-btn" data-v="all" onclick="setTimeframe('all')">All time</button>
+      </div>
+      <select id="timeframe-select" class="hidden" onchange="onTimeframeChange()" aria-label="Timeframe">
+        <option value="7">This week</option>
+        <option value="14">Last 2 weeks</option>
+        <option value="30">This month</option>
+        <option value="all">All time</option>
+      </select>
+    </header>
+
+    <!-- CHAT -->
+    <div id="view-chat">
+      <div class="messages" id="messages"></div>
+      <div class="input-area">
+        <div class="quick" id="quick-chips">
+          <button type="button" class="quick-btn" onclick="quickSend('Can I have a hint?')">Give me a hint</button>
+          <button type="button" class="quick-btn" onclick="quickSend('Can you show me an example?')">Show an example</button>
+          <button type="button" class="quick-btn" onclick="quickSend('I\'m stuck.')">I'm stuck</button>
+        </div>
+        <div class="photo-preview-wrap hidden" id="photo-preview-wrap">
+          <img id="photo-preview" src="" alt="Photo to send">
+          <button type="button" class="photo-remove" onclick="removePhoto()" aria-label="Remove photo">✕</button>
+        </div>
+        <div class="composer">
+          <button type="button" class="btn-photo" onclick="document.getElementById('photo-input').click()" aria-label="Add a photo">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8 7l1.5-2h5L16 7"/><circle cx="12" cy="13.5" r="3.2"/></svg>
+          </button>
+          <textarea class="input-box" id="msg-input" rows="1" aria-label="Your message" placeholder="Type your answer…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button type="button" class="btn-send" id="send-btn" onclick="sendMessage()" aria-label="Send">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+          </button>
+        </div>
+        <div class="input-note">StockFish asks questions to help you work it out yourself.</div>
+      </div>
+      <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(event)">
+    </div>
+
+    <!-- HISTORY -->
+    <div id="view-history">
+      <div class="hist-search">
+        <svg class="hs-ico" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="search" id="hist-search-input" placeholder="Search your chats…" autocomplete="off" aria-label="Search your chats" oninput="setHistSearch(this.value)">
+        <button type="button" class="hs-clear" id="hist-search-clear" aria-label="Clear search" onclick="clearHistSearch()">×</button>
+      </div>
+      <div class="filters" id="hist-filters" role="group" aria-label="Subject"></div>
+      <div class="history-count" id="history-count"></div>
+      <div id="session-list"></div>
+    </div>
+
+    <!-- SUMMARY (Parent) -->
+    <div id="view-summary">
+
+      <div class="psub-view active" id="pview-overview">
+        <div class="week-note hidden" id="week-note">
+          <div class="week-note-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9"/></svg>
+          </div>
+          <div class="week-note-body">
+            <div class="week-note-k">The week in a line</div>
+            <div class="week-note-t" id="week-note-text"></div>
+          </div>
+          <button type="button" class="week-note-x" onclick="dismissWeekNote()" aria-label="Dismiss note">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2 class="card-h">Time and subjects</h2><span class="card-sub" id="timeframe-label">This week</span></div>
+          <div class="glance-grid">
+            <div class="pie-wrap" id="pie-wrap"></div>
+            <div class="pie-side">
+              <div class="pie-figures">
+                <div class="fig-box"><div class="val" id="stat-sessions">0</div><div class="lbl">Sessions</div></div>
+                <div class="fig-box"><div class="val" id="stat-time">0m</div><div class="lbl">Time spent</div></div>
+              </div>
+              <div class="pie-legend" id="pie-legend"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Swipe left/right on a phone, or tap the buttons, to move between
+             "For you" (what needs your attention) and "At a glance" (the read). -->
+        <div class="pcarousel" id="pcarousel">
+          <div class="pctabs" role="tablist" aria-label="Overview">
+            <button type="button" class="pctab active" data-pc="0" role="tab" aria-selected="true" onclick="pcGo(0)">For you</button>
+            <button type="button" class="pctab" data-pc="1" role="tab" aria-selected="false" onclick="pcGo(1)">At a glance</button>
+          </div>
+          <div class="pcviewport" id="pcviewport">
+            <div class="pctrack" id="pctrack">
+              <div class="pcpane" id="pcpane-foryou" role="tabpanel" aria-label="For you">
+                <div id="attention-banner"></div>
+              </div>
+              <div class="pcpane" id="pcpane-glance" role="tabpanel" aria-label="At a glance">
+                <div class="card">
+                  <div class="card-head"><h2 class="card-h">At a glance</h2><span class="card-sub" id="summary-saved-at"></span></div>
+                  <div class="flag-list" id="flag-list">
+                    <div class="flag-item"><span class="flag-tag">Tip</span><span>Tap refresh for this period's read on how they're doing.</span></div>
+                  </div>
+                  <div id="loading-bar-wrap" class="hidden" style="margin-top:16px;">
+                    <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+                    <p class="card-sub" style="margin-top:8px;">Reading the sessions…</p>
+                  </div>
+                  <button type="button" class="refresh-btn" onclick="generateSummary()"><span id="generate-btn-label">↻ Refresh</span></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="pcdots">
+            <button type="button" class="pcdot active" data-pc="0" onclick="pcGo(0)" aria-label="Show For you"></button>
+            <button type="button" class="pcdot" data-pc="1" onclick="pcGo(1)" aria-label="Show At a glance"></button>
+          </div>
+        </div>
+
+        <div class="collapse hidden" id="col-written">
+          <button type="button" class="collapse-head" onclick="toggleCollapse('col-written')" aria-expanded="false"><span>This period in full</span><span class="chev">▾</span></button>
+          <div class="collapse-body"><div id="ai-summary-text"></div></div>
+        </div>
+      </div>
+
+      <div class="psub-view" id="pview-sessions">
+        <div class="card prow-list">
+          <div id="parent-session-list"></div>
+        </div>
+        <div class="card-sub" id="psess-count" style="margin-top:-8px;"></div>
+      </div>
+
+      <div class="psub-view" id="pview-ask">
+        <div class="ask-wrap" id="ask-card">
+          <p class="ask-intro">Ask for a write-up, exact quotes, where they struggled, or what a flag was about.</p>
+          <div id="ask-thread"></div>
+          <div class="ask-chips" id="ask-chips"></div>
+          <div class="ask-composer">
+            <textarea id="ask-input" rows="1" aria-label="Ask a question" placeholder="Ask about Aden…" onkeydown="handleAskKey(event)" oninput="autoResize(this)"></textarea>
+            <button type="button" class="ask-btn" id="ask-send-btn" onclick="askQuestion()">Ask</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <nav class="bottomnav" id="bottom-nav" aria-label="Main"></nav>
+  </div>
+</div>
+
+<!-- PARENT PORTAL LOADING SPLASH -->
+<div id="parent-loading" style="display:none">
+  <span class="pl-mascot js-mascot"></span>
+  <div class="pl-title">Getting Aden's progress…</div>
+  <div class="pl-sub">Pulling the latest sessions together. This just takes a moment.</div>
+  <div class="pl-bar loading-bar"><div class="loading-bar-fill"></div></div>
+</div>
+
+<!-- SESSION OVERLAY -->
+<div class="overlay hidden" id="session-overlay" onclick="closeOverlay(event)" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
+  <div class="overlay-panel">
+    <div class="overlay-header">
+      <div>
+        <div class="overlay-title" id="overlay-title">Session</div>
+        <div class="overlay-meta" id="overlay-meta"></div>
+      </div>
+      <div class="overlay-actions">
+        <button type="button" class="overlay-continue hidden" id="overlay-continue-btn" onclick="resumeSession()">Continue this session</button>
+        <button type="button" class="overlay-close" onclick="document.getElementById('session-overlay').classList.add('hidden')" aria-label="Close">✕</button>
+      </div>
+    </div>
+    <div class="overlay-messages" id="overlay-messages"></div>
+  </div>
+</div>
+
+<script>
+/* ══════ MASCOT — original sleepy creature, all custom art (no third-party IP) ══════ */
+const MASCOT_SVG = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path d="M32 12c-13 0-21 9-21 22 0 11 9 18 21 18s21-7 21-18c0-13-8-22-21-22z" fill="#2A3247"/>
+  <path d="M20 16c-4-3-9-2-10 2 3 1 6 1 9 0z" fill="#2A3247"/>
+  <path d="M44 16c4-3 9-2 10 2-3 1-6 1-9 0z" fill="#2A3247"/>
+  <path d="M32 30c-9 0-15 4-15 12 0 7 7 10 15 10s15-3 15-10c0-8-6-12-15-12z" fill="#FBF9F4"/>
+  <path d="M22 30c0-1.6 2.2-2.6 4-1.4 1.1.7 1.1 2.1 0 2.8-1.8 1.2-4 .2-4-1.4z" fill="#1C2333"/>
+  <path d="M42 30c0-1.6-2.2-2.6-4-1.4-1.1.7-1.1 2.1 0 2.8 1.8 1.2 4 .2 4-1.4z" fill="#1C2333"/>
+  <path d="M28 38c1.5 1.6 6.5 1.6 8 0" fill="none" stroke="#1C2333" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="20.5" cy="35" r="2.6" fill="#F5A524" opacity="0.55"/>
+  <circle cx="43.5" cy="35" r="2.6" fill="#F5A524" opacity="0.55"/>
+</svg>`;
+function mascot(cls) { return `<span class="mascot ${cls||''}">${MASCOT_SVG}</span>`; }
+
+/* ══════ CONFIG ══════ */
+const config = {
+  webhook: 'https://stanmak.app.n8n.cloud/webhook/aden-tutor-chat',
+  summaryWebhook: 'https://stanmak.app.n8n.cloud/webhook/aden-tutor-summary',
+  askWebhook: 'https://stanmak.app.n8n.cloud/webhook/aden-tutor-summary',
+  supabaseUrl: 'https://dsdmpqnuvggohwxqhgod.supabase.co',
+  supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzZG1wcW51dmdnb2h3eHFoZ29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MDAzNDIsImV4cCI6MjA5MjA3NjM0Mn0.Tfq0RtndhsEwqxcoTyw2MOPS4bJjDv8ec4qobSOO8R0',
+};
+
+/* ══════ AUTH ══════ */
+const PASSWORDS = { aden: 'aden', parent: 'dad123' };
+let currentRole = null, selectedWho = 'aden';
+
+function selectWho(who) {
+  selectedWho = who;
+  document.getElementById('who-aden').classList.toggle('selected', who === 'aden');
+  document.getElementById('who-parent').classList.toggle('selected', who === 'parent');
+  document.getElementById('who-aden').setAttribute('aria-pressed', who === 'aden');
+  document.getElementById('who-parent').setAttribute('aria-pressed', who === 'parent');
+  document.getElementById('login-pw').value = '';
+  document.getElementById('login-error').textContent = '';
+}
+function doLogin() {
+  const pw = document.getElementById('login-pw').value;
+  if (pw === PASSWORDS[selectedWho]) {
+    currentRole = selectedWho;
+    // FIX: remember the active role so a browser refresh doesn't dump us back
+    // to the login screen. Clears when the tab closes or on logout. Stores the
+    // role only, never the password — a convenience, not a security control.
+    try { sessionStorage.setItem('sf_role', currentRole); } catch(e) {}
+    document.getElementById('login-screen').style.display = 'none';
+    initApp();
+  } else {
+    document.getElementById('login-error').textContent = 'Wrong password — try again.';
+    document.getElementById('login-pw').value = '';
+  }
+}
+function logout() {
+  // Clear the remembered role so a reload lands on login, not straight back in.
+  try { sessionStorage.removeItem('sf_role'); } catch(e) {}
+  // Full page reload on logout. This is a deliberate privacy boundary:
+  // it wipes ALL rendered content and state (chat, parent summary, sessions,
+  // chips, flags, ask thread) so nothing from one account can ever be seen
+  // by the other. Do not replace this with a manual teardown.
+  location.reload();
+}
+
+/* ══════ STATE ══════ */
+let currentSubject = 'General';
+let currentSessionId = null;
+let sessionMessages = [];
+let photoBase64 = null;
+let allSessions = [];
+let isSending = false;
+
+/* ══════ TIME TRACKING — counts active (focused) seconds only ══════ */
+let sessionActiveSeconds = 0;
+let isTabActive = true;
+setInterval(() => {
+  if (isTabActive && currentRole === 'aden' && sessionMessages.length > 0) {
+    sessionActiveSeconds += 1;
+  }
+}, 1000);
+document.addEventListener('visibilitychange', () => { isTabActive = !document.hidden; });
+
+function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+/* ══════ INIT ══════ */
+async function initApp() {
+  document.getElementById('main-app').style.display = 'flex';
+  document.querySelectorAll('.js-mascot').forEach(e => { e.innerHTML = MASCOT_SVG; });
+  applyRole();
+  renderNav();
+  setupPullToRefresh();
+
+  if (currentRole === 'parent') { initParentApp(); return; }
+
+  await loadSessions();
+  currentSessionId = generateId();
+  sessionMessages = [];
+  document.getElementById('messages').innerHTML = '';
+  appendWelcomeMessage();
+  updateSessionStatus();
+}
+
+// Parent portal: show a short loading splash, then drop into the page while
+// the data (which usually takes 2-3s) keeps loading behind it. We reveal as
+// soon as the data lands — but never faster than MIN (so it doesn't just
+// flash) and never slower than MAX (so a slow network still opens the page,
+// and the summary fills in a moment later).
+async function initParentApp() {
+  const MIN = 1200, MAX = 3000, start = Date.now();
+
+  // Prep the underlying page so it's ready the instant the splash lifts.
+  currentSessionId = generateId();
+  sessionMessages = [];
+  document.getElementById('messages').innerHTML = '';
+  appendWelcomeMessage();
+  showParentLoading();
+  showSummaryView();
+  setupParentSwipe();
+
+  // Kick the data loads off in the background — nothing here blocks the reveal.
+  const dataReady = (async () => {
+    await loadSessions();
+    onTimeframeChange();
+    await loadCachedSummary();
+  })();
+
+  let revealed = false;
+  const reveal = () => { if (revealed) return; revealed = true; hideParentLoading(); };
+  dataReady
+    .catch(e => console.warn('Parent data load failed', e))
+    .then(() => setTimeout(reveal, Math.max(0, MIN - (Date.now() - start))));
+  setTimeout(reveal, MAX);
+}
+
+function showParentLoading() {
+  const el = document.getElementById('parent-loading');
+  el.classList.remove('fade');
+  el.style.display = 'flex';
+}
+function hideParentLoading() {
+  const el = document.getElementById('parent-loading');
+  el.classList.add('fade');
+  setTimeout(() => { el.style.display = 'none'; }, 450);
+}
+
+// Show the parent summary view without re-triggering a data load (switchTab
+// awaits loadSessions; here the load is already running in the background).
+function showSummaryView() {
+  document.getElementById('view-chat').style.display = 'none';
+  document.getElementById('view-history').style.display = 'none';
+  document.getElementById('view-summary').style.display = 'flex';
+  setNavActive(currentPSub); setPageTitle(currentPSub);
+}
+
+/* ══════ PULL-TO-REFRESH (mobile) ══════
+   Pull a scrolled-to-top view downward to reload the page. Works on the chat,
+   history and parent views. A full reload keeps things simple and safe: the
+   role is remembered in sessionStorage, so it lands right back where it was. */
+let ptrBound = false;
+function setupPullToRefresh() {
+  if (ptrBound) return;
+  ptrBound = true;
+
+  const indicator = document.getElementById('ptr-indicator');
+  const scrollers = ['messages', 'view-history', 'view-summary'];
+  const THRESHOLD = 72, MAX_PULL = 110;
+  let startY = 0, pull = 0, active = false, target = null, refreshing = false;
+
+  function setIndicator(dist) {
+    const y = Math.min(dist, MAX_PULL);
+    const shown = Math.max(0, y);
+    indicator.style.transform = `translate(-50%, ${-48 + shown * 0.7}px) rotate(${shown * 3}deg)`;
+    indicator.style.opacity = String(Math.min(1, shown / THRESHOLD));
+  }
+  function reset() {
+    active = false; pull = 0; target = null;
+    indicator.classList.remove('spinning');
+    indicator.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+    indicator.style.transform = 'translate(-50%, -48px)';
+    indicator.style.opacity = '0';
+    setTimeout(() => { indicator.style.transition = ''; }, 260);
   }
 
-  function glance(d){
-    const sorted=[...d.flags].sort((a,b)=>(ORDER[a.icon]??9)-(ORDER[b.icon]??9));
-    let html='<div class="sfo-card">', plain=0;
-    if(!sorted.length) html+='<div class="sfo-muted" style="font-size:13px;padding:6px 0">No notes for this period yet — tap refresh to generate them.</div>';
-    sorted.forEach(f=>{
-      const m=FLAG[f.icon]||FLAG['🌟'];
-      if(f.icon==='🚨'){
-        html+=`<div class="sfo-flag"><span class="sfo-tag" style="background:${m.tagBg};color:${m.tagFg};margin-top:2px">${m.label}</span>
-          <div style="flex-grow:1"><div class="sfo-txt">${esc(f.text)}</div>
-          <button class="sfo-act" data-ask="🚨">See what happened ›</button></div></div>`;
-      }else{
-        if(plain>0) html+='<div class="sfo-div"></div>';
-        html+=`<div class="sfo-grow"><span class="sfo-tag" style="background:${m.tagBg};color:${m.tagFg}">${m.label}</span><div class="sfo-txt">${esc(f.text)}</div></div>`;
-        plain++;
-      }
-    });
-    if(d.content){
-      html+= showFull
-        ? `<div class="sfo-full">${markdown(d.content)}</div><button class="sfo-fullbtn" data-act="less">Show less ▲</button>`
-        : `<button class="sfo-fullbtn" data-act="full">This period in full ›</button>`;
+  document.addEventListener('touchstart', e => {
+    if (refreshing || e.touches.length !== 1) return;
+    const el = scrollers.map(id => document.getElementById(id))
+      .find(s => s && s.style.display !== 'none' && s.contains(e.target));
+    if (!el || el.scrollTop > 0) return;
+    target = el; startY = e.touches[0].clientY; pull = 0; active = true;
+    indicator.style.transition = '';
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!active || refreshing) return;
+    pull = e.touches[0].clientY - startY;
+    if (pull <= 0 || (target && target.scrollTop > 0)) { active = false; setIndicator(0); return; }
+    if (e.cancelable) e.preventDefault(); // hold back native rubber-band while pulling
+    setIndicator(pull * 0.55);
+  }, { passive: false });
+
+  document.addEventListener('touchend', () => {
+    if (!active || refreshing) return;
+    if (pull * 0.55 >= THRESHOLD) {
+      refreshing = true;
+      indicator.style.transition = 'transform 0.2s ease';
+      indicator.style.transform = 'translate(-50%, 28px)';
+      indicator.style.opacity = '1';
+      indicator.classList.add('spinning');
+      setTimeout(() => location.reload(), 350);
+    } else {
+      reset();
     }
-    return html+'</div>';
+  }, { passive: true });
+}
+
+function applyRole() {
+  const isParent = currentRole === 'parent';
+  document.getElementById('role-badge').textContent = isParent ? 'Viewing Aden' : 'Student';
+  document.getElementById('user-name').textContent = isParent ? 'Parent' : 'Aden';
+  const av = document.getElementById('user-avatar');
+  av.textContent = isParent ? 'P' : 'A';
+  av.classList.toggle('parent', isParent);
+  document.getElementById('brand-sub').textContent = isParent ? 'Parent portal' : '';
+  document.getElementById('tf-pills').classList.toggle('hidden', !isParent);
+  document.querySelectorAll('.js-new').forEach(b => { b.disabled = isParent; b.classList.toggle('hidden', isParent); });
+  if (isParent) {
+    document.getElementById('session-status').textContent = "Aden's progress";
+    document.getElementById('msg-input').disabled = true;
+    document.getElementById('msg-input').placeholder = 'Log in as Aden to chat.';
+    document.getElementById('send-btn').disabled = true;
+    document.querySelector('.btn-photo').disabled = true;
+    document.getElementById('quick-chips').classList.add('hidden');
+  }
+}
+
+/* ══════ NAVIGATION (sidebar on desktop, bottom bar on phones) ══════ */
+const ICON = {
+  chat: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+  hist: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  over: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/></svg>',
+  list: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+  ask: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5M12 16.5h.01"/></svg>',
+};
+const NAV_ITEMS = {
+  aden: [ { id: 'chat', label: 'Chat', icon: 'chat' }, { id: 'history', label: 'History', icon: 'hist' } ],
+  parent: [ { id: 'overview', label: 'Overview', icon: 'over' }, { id: 'sessions', label: 'Sessions', icon: 'list' }, { id: 'ask', label: 'Ask', icon: 'ask', long: 'Ask about Aden' } ],
+};
+const PAGE_TITLES = { chat: "Today's session", history: 'Your sessions', overview: "How Aden's getting on", sessions: 'Sessions', ask: 'Ask about Aden' };
+function renderNav() {
+  const items = NAV_ITEMS[currentRole === 'parent' ? 'parent' : 'aden'];
+  document.getElementById('sb-nav').innerHTML = items.map(i =>
+    `<button type="button" class="nav-item" data-nav="${i.id}" onclick="navGo('${i.id}')">${ICON[i.icon]}<span>${i.long || i.label}</span></button>`).join('');
+  document.getElementById('bottom-nav').innerHTML = items.map(i =>
+    `<button type="button" class="tab-item" data-nav="${i.id}" onclick="navGo('${i.id}')">${ICON[i.icon]}<span>${i.label}</span></button>`).join('');
+  const start = currentRole === 'parent' ? currentPSub : 'chat';
+  setNavActive(start); setPageTitle(start);
+}
+function setNavActive(id) {
+  document.querySelectorAll('[data-nav]').forEach(b => {
+    const on = b.dataset.nav === id;
+    b.classList.toggle('active', on);
+    if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+}
+function setPageTitle(key) { const el = document.getElementById('page-title'); if (el) el.textContent = PAGE_TITLES[key] || ''; }
+function navGo(id) { if (currentRole === 'parent') switchPSub(id); else switchTab(id); }
+function setTimeframe(v) {
+  document.getElementById('timeframe-select').value = v;
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  onTimeframeChange();
+}
+function quickSend(text) {
+  if (currentRole === 'parent' || isSending) return;
+  document.getElementById('msg-input').value = text;
+  sendMessage();
+}
+
+/* ══════ PARENT SUB-TABS ══════ */
+let currentPSub = 'overview';
+function switchPSub(sub) {
+  currentPSub = sub;
+  ['overview','sessions','ask'].forEach(s => {
+    const v = document.getElementById('pview-' + s);
+    if (v) v.classList.toggle('active', s === sub);
+  });
+  if (sub === 'sessions') renderParentSessions();
+  if (sub === 'ask') renderAskChips(); // re-roll the rotating chip selection each time Ask opens
+  if (sub === 'overview') setTimeout(pcRefreshHeight, 0); // pane heights are unknown while hidden
+  setNavActive(sub); setPageTitle(sub);
+  document.getElementById('view-summary').scrollTop = 0;
+}
+function toggleCollapse(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+  const h = el.querySelector('.collapse-head'); if (h) h.setAttribute('aria-expanded', el.classList.contains('open'));
+  pcRefreshHeight(); // a collapse inside a pane changes its height
+}
+
+/* ══════ OVERVIEW CAROUSEL — "For you" ⇄ "At a glance" ══════
+   Two panes side by side. The segmented buttons and dots switch panes on any
+   device (so desktop works with a click); on a phone you can also drag left or
+   right. Vertical drags fall through to the page scroll / pull-to-refresh. */
+let pcIndex = 0;
+const PC_COUNT = 2;
+function pcGo(i) {
+  pcIndex = Math.max(0, Math.min(PC_COUNT - 1, i));
+  const track = document.getElementById('pctrack');
+  if (track) track.style.transform = `translateX(-${pcIndex * 100}%)`;
+  document.querySelectorAll('.pctab').forEach(b => {
+    const on = +b.dataset.pc === pcIndex;
+    b.classList.toggle('active', on); b.setAttribute('aria-selected', on);
+  });
+  document.querySelectorAll('.pcdot').forEach(d => d.classList.toggle('active', +d.dataset.pc === pcIndex));
+  pcRefreshHeight();
+}
+// Size the viewport to the pane in view so the shorter pane leaves no gap and
+// the taller one is never clipped. Called whenever pane content changes.
+function pcRefreshHeight() {
+  const vp = document.getElementById('pcviewport');
+  const pane = document.querySelectorAll('.pcpane')[pcIndex];
+  if (vp && pane) vp.style.height = pane.offsetHeight + 'px';
+}
+let pcSwipeBound = false;
+function setupParentSwipe() {
+  if (pcSwipeBound) return;
+  const vp = document.getElementById('pcviewport');
+  const track = document.getElementById('pctrack');
+  if (!vp || !track) return;
+  pcSwipeBound = true;
+
+  let x0 = 0, y0 = 0, dx = 0, dy = 0, dragging = false, decided = false, horiz = false;
+  const width = () => vp.clientWidth || 1;
+
+  vp.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    dx = 0; dy = 0; dragging = true; decided = false; horiz = false;
+    track.classList.add('dragging');
+  }, { passive: true });
+
+  vp.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    dx = e.touches[0].clientX - x0; dy = e.touches[0].clientY - y0;
+    if (!decided && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      decided = true; horiz = Math.abs(dx) > Math.abs(dy);
+    }
+    if (!horiz) return;                 // vertical → let the page scroll
+    if (e.cancelable) e.preventDefault();
+    let off = -pcIndex * width() + dx;
+    const min = -(PC_COUNT - 1) * width(), max = 0;
+    if (off > max) off = max + (off - max) * 0.3;   // rubber-band at the edges
+    if (off < min) off = min + (off - min) * 0.3;
+    track.style.transform = `translateX(${off}px)`;
+  }, { passive: false });
+
+  const end = () => {
+    if (!dragging) return;
+    dragging = false; track.classList.remove('dragging');
+    if (horiz && Math.abs(dx) > width() * 0.18) pcGo(pcIndex + (dx < 0 ? 1 : -1));
+    else pcGo(pcIndex);
+  };
+  vp.addEventListener('touchend', end, { passive: true });
+  vp.addEventListener('touchcancel', end, { passive: true });
+
+  window.addEventListener('resize', () => { pcGo(pcIndex); });
+}
+
+/* ══════ SUBJECT BADGES (a session can now carry more than one) ══════ */
+function subjectBadgeClass(subject) {
+  return subject === 'Maths' ? 'maths' : subject === 'Reading' ? 'reading' : subject === 'Writing' ? 'writing' : subject === 'Science' ? 'science' : subject === 'Wellbeing' ? 'wellbeing' : subject === 'Hobbies' ? 'hobbies' : '';
+}
+function renderSubjectBadges(s) {
+  const subjects = (s.subjects && s.subjects.length) ? s.subjects : [s.subject];
+  return subjects.map(sub => `<span class="badge ${subjectBadgeClass(sub)}">${escapeHtml(sub)}</span>`).join('');
+}
+
+/* ══════ PARENT SESSIONS LIST (reuses openSession overlay) ══════ */
+function renderParentSessions() {
+  const scope = sessionsInTimeframe();
+  const list = document.getElementById('parent-session-list');
+  const count = document.getElementById('psess-count');
+  count.textContent = scope.length ? `${scope.length} session${scope.length !== 1 ? 's' : ''} in ${getTimeframeLabel().toLowerCase()}. Open one to read the conversation.` : '';
+  if (!scope.length) {
+    list.innerHTML = `<div class="empty-state"><div class="big">${mascot()}</div><p>No sessions in this period.<br>Try a wider timeframe.</p></div>`;
+    return;
+  }
+  list.innerHTML = scope.map(s => {
+    const preview = s.messages.find(m => m.role === 'tutor');
+    const pt = preview ? preview.text.slice(0,110) + (preview.text.length > 110 ? '…' : '') : '';
+    const title = s.title || sessionTitle(s.messages);
+    return `<button type="button" class="prow" onclick="openSession('${s.id}')">
+      <div class="prow-badges">${renderSubjectBadges(s)}</div>
+      <div class="prow-main"><span class="prow-title">${escapeHtml(title)}</span>${pt ? `<span class="prow-prev">${escapeHtml(pt)}</span>` : ''}</div>
+      <div class="prow-side"><span class="prow-when">${formatDate(s.date)}</span><span class="prow-count">${s.messages.length} messages${s.photoCount > 0 ? ` · ${s.photoCount} photo${s.photoCount !== 1 ? 's' : ''}` : ''}</span></div>
+    </button>`;
+  }).join('');
+}
+
+/* ══════ ATTENTION CARDS — each card carries its own next step ══════ */
+let _sgActions = [];
+function runSuggestion(i) { const a = _sgActions[i]; if (a && a.run) a.run(); }
+function sgBtn(label, run, cls) {
+  _sgActions.push({ run });
+  return `<button type="button" class="sg-btn ${cls}" onclick="runSuggestion(${_sgActions.length - 1})">${escapeHtml(label)}</button>`;
+}
+function askAbout(q) { switchPSub('ask'); askQuestion(q); }
+const ATT_ICO = {
+  star: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>',
+  info: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5h.01"/></svg>',
+  bulb: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>',
+};
+function attCard(kind, ico, title, text, foot, btns) {
+  return `<div class="att ${kind}"><div class="att-head"><span class="att-ico">${ico}</span><span class="att-title">${escapeHtml(title)}</span></div><p class="att-text">${escapeHtml(text)}</p><div class="att-foot"><span class="att-foot-l">${escapeHtml(foot)}</span><div class="att-btns">${btns}</div></div></div>`;
+}
+function renderAttention() {
+  const el = document.getElementById('attention-banner');
+  if (!el) return;
+  _sgActions = [];
+  const flags = lastFlags || [];
+  const find = icon => flags.find(f => (f.icon || '') === icon);
+  const urgent = find('🚨'), star = find('🌟'), idea = find('💡'), concern = find('⚠️');
+  const scope = sessionsInTimeframe();
+  const cards = [];
+
+  if (urgent) {
+    // Urgent leads on its own, so good news doesn't dilute it.
+    cards.push(attCard('urgent', ATT_ICO.alert, 'Worth a look', urgent.text, 'Have a short, relaxed check-in',
+      sgBtn('See what happened', () => askAbout('You flagged something urgent this period. What exactly was it? Quote the actual message or moment, and tell me how Stockfish responded.'), 'primary')
+      + sgBtn('How do I bring it up?', () => askAbout('Give me one gentle, low-pressure way to bring up the concern you flagged with Aden, in a sentence or two I could actually say.'), 'ghost')));
+  } else {
+    if (star) cards.push(attCard('good', ATT_ICO.star, 'Good sign', star.text, 'A nice moment to build on',
+      sgBtn('What should I praise?', () => askAbout('What specifically did Aden do well this period that I could genuinely praise him for? Keep it concrete.'), 'primary')));
+    if (concern) cards.push(attCard('note', ATT_ICO.info, 'Worth knowing', concern.text, 'Worth keeping an eye on',
+      sgBtn('Tell me more', () => askAbout('You flagged something worth knowing about this period. What exactly was it? Quote the actual message or moment, and tell me how Stockfish responded.'), 'ghost')));
+    if (idea) cards.push(attCard('idea', ATT_ICO.bulb, 'Something to try', idea.text, 'One small thing for home',
+      sgBtn('One thing I can do', () => askAbout('What is the single most useful 10-minute thing I can do at home this week to support Aden, based on this period?'), 'ghost')));
   }
 
-  function foryou(d){
-    const cards=d.flags.filter(f=>(FLAG[f.icon]||{}).coach).map(f=>{
-      const c=FLAG[f.icon].coach;
-      return `<div class="sfo-coach" style="background:${c.bg}">
-        <div class="sfo-hd"><div class="sfo-ico" style="background:${c.ig};color:${c.ic}">${FLAG[f.icon].ico}</div>
-          <div class="sfo-nm" style="${c.coral?'color:var(--sfo-coral-dark)':''}">${esc(c.name)}</div>
-          <button class="sfo-cta" style="${c.coral?'color:var(--sfo-coral-dark)':''}" data-ask="${f.icon}">Ask ›</button></div>
-        <div class="sfo-desc">${esc(f.text)}</div></div>`;
-    }).join('');
-    return `<div class="sfo-foryou">${cards||'<div class="sfo-muted" style="font-size:13px;padding:8px">Nothing to action this week.</div>'}</div>`;
+  if (!cards.length) {
+    if (scope.length) {
+      cards.push(attCard('note', ATT_ICO.star, 'Nothing needs your attention', 'Aden has been engaging well this period.', 'Want the short version?',
+        sgBtn('Summarise this week', () => askAbout('Give me a short, friendly overview of how Aden has been doing this week.'), 'ghost')));
+    } else {
+      el.innerHTML = `<div class="att"><div class="att-head"><span class="att-ico">${ATT_ICO.info}</span><span class="att-title">No sessions yet in this period</span></div><p class="att-text">Pick a wider timeframe, or check back after Aden's next session.</p></div>`;
+      return;
+    }
   }
+  el.innerHTML = `<div class="att-grid${cards.length === 1 ? ' one' : ''}">${cards.join('')}</div>`;
+  setTimeout(pcRefreshHeight, 0); // the "For you" pane just changed height
+}
 
-  // Use your app's markdown renderer if present, else a safe minimal fallback
-  function markdown(raw){
-    if(typeof renderSummaryMarkdown==='function'){ try{ return renderSummaryMarkdown(raw); }catch(e){} }
-    return esc(raw).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
-  }
+/* ══════ TABS ══════ */
+async function switchTab(tab) {
+  const key = tab === 'summary' ? currentPSub : tab;
+  setNavActive(key); setPageTitle(key);
+  document.getElementById('view-chat').style.display = tab === 'chat' ? 'flex' : 'none';
+  document.getElementById('view-history').style.display = tab === 'history' ? 'flex' : 'none';
+  document.getElementById('view-summary').style.display = tab === 'summary' ? 'flex' : 'none';
+  // Always pull fresh session data from Supabase when opening a data view,
+  // so the parent never sees stale numbers or a missing recent session.
+  if (tab === 'history' || tab === 'summary') await loadSessions();
+  if (tab === 'history') renderHistory();
+  if (tab === 'summary') onTimeframeChange();
+}
 
-  function wire(root){
-    root.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{ tab=+el.dataset.tab; render(); });
-    root.querySelectorAll('.sfo-period button').forEach(b=>b.onclick=()=>{
-      const sel=document.getElementById('timeframe-select');
-      if(sel){ sel.value=b.dataset.v; sel.dispatchEvent(new Event('change')); }
-      load();
+/* ══════ NEW SESSION — clean slate, Claude-style ══════ */
+function startNewSession() {
+  // Archive the current session to History / Supabase first
+  saveCurrentSession();
+
+  // Reset state
+  currentSessionId = generateId();
+  currentSubject = 'General';
+  sessionMessages = [];
+  sessionActiveSeconds = 0;
+  photoBase64 = null;
+  removePhoto();
+
+  // Wipe the visible chat and show a single fresh welcome
+  document.getElementById('messages').innerHTML = '';
+  appendWelcomeMessage();
+  updateSessionStatus();
+}
+
+const ADEN_WELCOMES = [
+  `Hey Aden! 👋 I'm Stockfish — 🧠 homework, 💛 talking things out, or 🎉 fun stuff. What's up?`,
+  `Yo Aden! 🐟 Stockfish here for 🧠 homework, 💛 a chat, or 🎉 whatever you're into. What are we doing?`,
+  `Hey hey Aden! 👋 It's Stockfish. 🧠 Stuck, 💛 need to talk, or 🎉 got something cool? Let's go.`,
+  `Aden! 🎉 Good to see you. Stockfish here for 🧠 homework, 💛 a chat, or 🎉 the fun stuff. What's the mission?`,
+  `Hi Aden! 👋 Stockfish, ready to go — 🧠 homework, 💛 anything on your mind, or 🎉 what you're excited about. Where do we start?`,
+];
+
+function appendWelcomeMessage() {
+  const isParent = currentRole === 'parent';
+  const msg = isParent
+    ? `👋 Welcome to the parent view.<br><br>Use <strong>Overview</strong> for the week's summary, <strong>Sessions</strong> to read conversations, and <strong>Ask</strong> to ask questions.`
+    : ADEN_WELCOMES[Math.floor(Math.random() * ADEN_WELCOMES.length)];
+  const wrap = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg tutor';
+  div.innerHTML = `<div class="msg-avatar">${mascot()}</div><div><div class="msg-bubble"><p>${msg}</p></div><div class="msg-time">${formatTime(new Date())}</div></div>`;
+  wrap.appendChild(div);
+}
+
+/* ══════ PHOTO ══════ */
+function handlePhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    photoBase64 = ev.target.result;
+    document.getElementById('photo-preview').src = photoBase64;
+    document.getElementById('photo-preview-wrap').classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+function removePhoto() {
+  photoBase64 = null;
+  document.getElementById('photo-preview').src = '';
+  document.getElementById('photo-preview-wrap').classList.add('hidden');
+}
+
+/* ══════ SEND ══════ */
+async function sendMessage() {
+  if (currentRole === 'parent' || isSending) return;
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text && !photoBase64) return;
+
+  isSending = true;
+  document.getElementById('send-btn').disabled = true;
+  input.value = '';
+  input.style.height = '';
+
+  const photoSnap = photoBase64;
+  const userMsg = { role: 'user', text, photo: photoSnap, time: new Date().toISOString() };
+  sessionMessages.push(userMsg);
+  appendMessage('user', text, photoSnap);
+  removePhoto();
+
+  const thinkId = showThinking();
+
+  try {
+    const res = await fetch(config.webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: currentSessionId,
+        subject: currentSubject,
+        message: text,
+        photo: photoSnap || null,
+        history: sessionMessages.slice(-10).map(m => ({ role: m.role, content: m.text })),
+      }),
     });
-    root.querySelectorAll('[data-ask]').forEach(b=>b.onclick=()=>{
-      const q=((FLAG[b.dataset.ask]||{}).coach||{}).q || 'Tell me more about this.';
-      if(typeof askAbout==='function') askAbout(q); else alert(q);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const reply = data.reply || data.message || data.text || JSON.stringify(data);
+    if (data.subject && typeof data.subject === 'string') currentSubject = data.subject;
+    hideThinking(thinkId);
+    const tutorMsg = { role: 'tutor', text: reply, time: new Date().toISOString() };
+    sessionMessages.push(tutorMsg);
+    appendMessage('tutor', reply);
+    saveCurrentSession();
+  } catch(err) {
+    hideThinking(thinkId);
+    appendMessage('tutor', "Hmm, I couldn't reach the server. Check your internet and try again! 🔧");
+    console.error(err);
+  }
+
+  isSending = false;
+  document.getElementById('send-btn').disabled = false;
+  updateSessionStatus();
+}
+
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height = ''; el.style.height = Math.min(el.scrollHeight, 110) + 'px'; }
+
+/* ══════ MESSAGES ══════ */
+function appendMessage(role, text, photo) {
+  const wrap = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const avatar = role === 'tutor' ? mascot() : 'A';
+  const bubbleHtml = `<p>${escapeHtml(text).replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</p>`
+    + (photo ? `<img class="msg-img" src="${photo}" alt="Homework">` : '');
+  div.innerHTML = `<div class="msg-avatar">${avatar}</div><div class="msg-content"><div class="msg-bubble">${bubbleHtml}</div><div class="msg-time">${formatTime(new Date())}</div></div>`;
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+function appendDivider() {
+  const wrap = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'session-divider';
+  div.innerHTML = `<div class="session-divider-line"></div><div class="session-divider-label">New session · ${formatTime(new Date())}</div><div class="session-divider-line"></div>`;
+  wrap.appendChild(div);
+}
+let thinkCounter = 0;
+function showThinking() {
+  const id = 'think-' + (++thinkCounter);
+  const wrap = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.id = id; div.className = 'msg tutor';
+  div.innerHTML = `<div class="msg-avatar">${mascot()}</div><div class="msg-bubble"><div class="thinking"><span></span><span></span><span></span></div></div>`;
+  wrap.appendChild(div); wrap.scrollTop = wrap.scrollHeight;
+  return id;
+}
+function hideThinking(id) { const el = document.getElementById(id); if (el) el.remove(); }
+
+/* ══════ STORAGE — Supabase primary, localStorage fallback ══════ */
+function saveCurrentSession() {
+  if (sessionMessages.length < 2) return;
+  const session = {
+    id: currentSessionId, subject: currentSubject, date: new Date().toISOString(),
+    messages: [...sessionMessages], photoCount: sessionMessages.filter(m => m.photo).length,
+    title: sessionTitle(sessionMessages),
+    durationSeconds: sessionActiveSeconds,
+  };
+  const idx = allSessions.findIndex(s => s.id === currentSessionId);
+  if (idx >= 0) allSessions[idx] = session; else allSessions.unshift(session);
+  try { localStorage.setItem('aden_sessions', JSON.stringify(allSessions)); } catch(e) {}
+  pushToSupabase(session);
+}
+
+async function loadSessions() {
+  // Show loading state
+  document.getElementById('session-status').textContent = 'Loading...';
+  try {
+    const res = await fetch(
+      `${config.supabaseUrl}/rest/v1/sessions?order=date.desc&limit=100`,
+      { headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}` } }
+    );
+    if (res.ok) {
+      const rows = await res.json();
+      allSessions = rows.map(r => ({
+        id: r.id,
+        subject: r.subject,
+        subjects: (() => {
+          try {
+            const parsed = typeof r.subjects === 'string' ? JSON.parse(r.subjects) : r.subjects;
+            return (Array.isArray(parsed) && parsed.length) ? parsed : [r.subject];
+          } catch(e) { return [r.subject]; }
+        })(),
+        date: r.date,
+        photoCount: r.photo_count || 0,
+        title: r.title || '',
+        durationSeconds: r.duration_seconds || 0,
+        messages: (() => {
+          try { return typeof r.messages === 'string' ? JSON.parse(r.messages) : (r.messages || []); }
+          catch(e) { return []; }
+        })(),
+      }));
+      // Backfill titles for older rows that don't have one
+      allSessions.forEach(s => { if (!s.title) s.title = sessionTitle(s.messages); });
+      try { localStorage.setItem('aden_sessions', JSON.stringify(allSessions)); } catch(e) {}
+    } else {
+      try { allSessions = JSON.parse(localStorage.getItem('aden_sessions') || '[]'); } catch(e) { allSessions = []; }
+    }
+  } catch(e) {
+    console.warn('Supabase load failed, using localStorage', e);
+    try { allSessions = JSON.parse(localStorage.getItem('aden_sessions') || '[]'); } catch(e2) { allSessions = []; }
+  } finally {
+    // Clear the "Loading..." status on every exit path. updateSessionStatus()
+    // returns early for parents, so set their label explicitly.
+    if (currentRole === 'parent') {
+      document.getElementById('session-status').textContent = "Aden's progress";
+    } else {
+      updateSessionStatus();
+    }
+  }
+}
+
+async function pushToSupabase(session) {
+  try {
+    await fetch(`${config.supabaseUrl}/rest/v1/sessions`, {
+      method: 'POST',
+      headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ id: session.id, subject: session.subject, date: session.date, messages: JSON.stringify(session.messages), photo_count: session.photoCount, message_count: session.messages.length, title: session.title, duration_seconds: session.durationSeconds })
     });
-    root.querySelectorAll('[data-act]').forEach(b=>b.onclick=async()=>{
-      const a=b.dataset.act;
-      if(a==='note'){ noteHidden=true; render(); }
-      else if(a==='full'){ showFull=true; render(); }
-      else if(a==='less'){ showFull=false; render(); }
-      else if(a==='refresh'){
-        b.style.opacity=.5;
-        try{ if(typeof generateSummary==='function') await generateSummary(); }catch(e){}
-        await load();
+  } catch(e) { console.warn('Supabase push failed:', e); }
+}
+
+/* ══════ HISTORY ══════ */
+let histFilter = 'All';
+let histSearch = '';
+function setHistFilter(f) { histFilter = f; renderHistory(); }
+function setHistSearch(v) {
+  histSearch = v;
+  document.getElementById('hist-search-clear').classList.toggle('show', v.trim().length > 0);
+  renderHistory();
+}
+function clearHistSearch() {
+  const input = document.getElementById('hist-search-input');
+  input.value = '';
+  input.focus();
+  setHistSearch('');
+}
+// Does a session match every whitespace-separated keyword? Searches the title
+// plus every message so Aden can find a chat by anything he or Stockfish said.
+function sessionMatchesSearch(s, terms) {
+  if (!terms.length) return true;
+  const hay = ((s.title || sessionTitle(s.messages)) + ' ' +
+    s.messages.map(m => m.text).join(' ')).toLowerCase();
+  return terms.every(t => hay.includes(t));
+}
+function renderHistory() {
+  const list = document.getElementById('session-list');
+  const count = document.getElementById('history-count');
+  const filters = document.getElementById('hist-filters');
+  if (!allSessions.length) {
+    filters.innerHTML = '';
+    list.innerHTML = `<div class="empty-state"><div class="big">${mascot()}</div><p>No sessions yet.<br>Start chatting and they'll appear here.</p></div>`;
+    count.textContent = ''; return;
+  }
+  const subjectsOf = s => (s.subjects && s.subjects.length) ? s.subjects : [s.subject];
+  const all = ['All', ...new Set(allSessions.flatMap(subjectsOf).filter(Boolean))];
+  if (!all.includes(histFilter)) histFilter = 'All';
+  filters.innerHTML = all.map(f => `<button type="button" class="pill${f === histFilter ? ' active' : ''}" aria-pressed="${f === histFilter}" onclick="setHistFilter('${escapeHtml(f)}')">${escapeHtml(f)}</button>`).join('');
+  const terms = histSearch.toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = allSessions
+    .filter(s => histFilter === 'All' || subjectsOf(s).includes(histFilter))
+    .filter(s => sessionMatchesSearch(s, terms));
+  if (!shown.length) {
+    count.textContent = 'No matches';
+    list.innerHTML = `<div class="empty-state"><div class="big">${mascot()}</div><p>No chats found${terms.length ? ` for “${escapeHtml(histSearch.trim())}”` : ''}.<br>Try a different word.</p></div>`;
+    return;
+  }
+  count.textContent = `${shown.length} session${shown.length !== 1 ? 's' : ''}`;
+  list.innerHTML = shown.map(s => {
+    const preview = s.messages.find(m => m.role === 'tutor');
+    const pt = preview ? preview.text.slice(0,100) + (preview.text.length > 100 ? '…' : '') : '';
+    const title = s.title || sessionTitle(s.messages);
+    return `<button type="button" class="session-card" onclick="openSession('${s.id}')">
+      <div class="sc-top"><div class="sc-badges">${renderSubjectBadges(s)}</div><span class="session-card-date">${formatDateTime(s.date)}</span></div>
+      <div class="session-card-title">${escapeHtml(title)}</div>
+      ${pt ? `<div class="session-preview">${escapeHtml(pt)}</div>` : ''}
+      <div class="session-msg-count">${s.messages.length} messages${s.photoCount > 0 ? ` · ${s.photoCount} photo${s.photoCount !== 1 ? 's' : ''}` : ''}</div>
+    </button>`;
+  }).join('');
+}
+let overlaySessionId = null;
+function openSession(id) {
+  const session = allSessions.find(s => s.id === id);
+  if (!session) return;
+  overlaySessionId = id;
+  document.getElementById('overlay-title').textContent = session.title || sessionTitle(session.messages);
+  document.getElementById('overlay-meta').textContent = `${session.subject} · ${formatDateTime(session.date)} · ${session.messages.length} messages`;
+  document.getElementById('overlay-messages').innerHTML = session.messages.map(m => {
+    const av = m.role === 'tutor' ? mascot() : 'A';
+    return `<div class="msg ${m.role}"><div class="msg-avatar">${av}</div><div><div class="msg-bubble"><p>${escapeHtml(m.text).replace(/\n/g,'<br>')}</p>${m.photo?`<img class="msg-img" src="${m.photo}" alt="">`:''}
+    </div><div class="msg-time">${formatTime(new Date(m.time))}</div></div></div>`;
+  }).join('');
+  // Only students can continue chatting; parents get a read-only preview
+  document.getElementById('overlay-continue-btn').classList.toggle('hidden', currentRole === 'parent');
+  document.getElementById('session-overlay').classList.remove('hidden');
+}
+function closeOverlay(e) { if (e.target === document.getElementById('session-overlay')) document.getElementById('session-overlay').classList.add('hidden'); }
+
+/* ══════ RESUME A PAST SESSION INTO THE LIVE CHAT ══════ */
+function resumeSession() {
+  const session = allSessions.find(s => s.id === overlaySessionId);
+  if (!session) return;
+
+  // Save any in-progress session before switching
+  saveCurrentSession();
+
+  // Load the past session as the active one
+  currentSessionId = session.id;
+  currentSubject = session.subject || 'General';
+  sessionMessages = session.messages.map(m => ({ ...m }));
+  photoBase64 = null;
+  removePhoto();
+
+  // Rebuild the chat view from the loaded messages
+  const wrap = document.getElementById('messages');
+  wrap.innerHTML = session.messages.map(m => {
+    const av = m.role === 'tutor' ? mascot() : 'A';
+    return `<div class="msg ${m.role}"><div class="msg-avatar">${av}</div><div><div class="msg-bubble"><p>${escapeHtml(m.text).replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</p>${m.photo?`<img class="msg-img" src="${m.photo}" alt="">`:''}</div><div class="msg-time">${formatTime(new Date(m.time))}</div></div></div>`;
+  }).join('');
+
+  updateSessionStatus();
+
+  // Close overlay and go to chat
+  document.getElementById('session-overlay').classList.add('hidden');
+  switchTab('chat');
+  setTimeout(() => { wrap.scrollTop = wrap.scrollHeight; }, 50);
+}
+
+/* ══════ SUMMARY ══════ */
+let lastGeneratedTimeframe = null;
+
+function getTimeframeDays() {
+  const v = document.getElementById('timeframe-select').value;
+  return v === 'all' ? null : parseInt(v, 10);
+}
+function getTimeframeLabel() {
+  const sel = document.getElementById('timeframe-select');
+  return sel.options[sel.selectedIndex].text;
+}
+function sessionsInTimeframe() {
+  const days = getTimeframeDays();
+  if (days === null) return [...allSessions];
+  const cutoff = days * 24 * 60 * 60 * 1000;
+  return allSessions.filter(s => (Date.now() - new Date(s.date)) < cutoff);
+}
+function onTimeframeChange() {
+  const label = getTimeframeLabel();
+  document.getElementById('timeframe-label').textContent = label;
+  document.getElementById('generate-btn-label').textContent = `↻ Refresh (${label.toLowerCase()})`;
+  updateStats();
+  renderAskChips();
+  renderAttention();
+  if (currentPSub === 'sessions') renderParentSessions();
+  // Timeframe changed — the shown summary and Q&A are for a different period now
+  if (lastGeneratedTimeframe !== null && lastGeneratedTimeframe !== document.getElementById('timeframe-select').value) {
+    document.getElementById('ask-thread').innerHTML = '';
+    askHistory = [];
+    loadCachedSummary();
+  }
+}
+
+/* Subject colours — shared by the pie and its legend */
+const SUBJECT_COLORS = {
+  Maths: '#3E6BE0', Reading: '#4C9A2A', Writing: '#7C5CE0',
+  Science: '#E59A0E', Wellbeing: '#D6457A', Hobbies: '#E0642E', General: '#7A8099'
+};
+function subjColor(s) { return SUBJECT_COLORS[s] || '#7A8099'; }
+function subjClass(s) {
+  return s === 'Maths' ? 'maths' : s === 'Reading' ? 'reading' : s === 'Writing' ? 'writing'
+    : s === 'Science' ? 'science' : s === 'Wellbeing' ? 'wellbeing' : s === 'Hobbies' ? 'hobbies' : '';
+}
+
+/* Subject donut — pure SVG, no libraries. Counts sessions per subject. */
+function renderSubjectPie(scope) {
+  const wrap = document.getElementById('pie-wrap');
+  const legend = document.getElementById('pie-legend');
+  if (!wrap || !legend) return;
+
+  const counts = {};
+  scope.forEach(s => { counts[s.subject] = (counts[s.subject] || 0) + 1; });
+  const entries = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+  const total = entries.reduce((a, [,c]) => a + c, 0);
+  const r = 15.915, C = 100; // circumference = 100 units → dasharray in %
+
+  if (!total) {
+    wrap.innerHTML = `<svg viewBox="0 0 42 42"><circle cx="21" cy="21" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="7"/></svg>
+      <div class="pie-center"><div class="pc-val">0</div><div class="pc-lbl">Subjects</div></div>`;
+    legend.innerHTML = `<div class="pie-empty">No subject activity yet in this period.</div>`;
+    return;
+  }
+
+  let offset = 0; // CSS rotates the ring so segment 1 starts at 12 o'clock
+  const segs = entries.map(([sub, c]) => {
+    const pct = (c / total) * C;
+    const seg = `<circle cx="21" cy="21" r="${r}" fill="none" stroke="${subjColor(sub)}" stroke-width="7"
+      stroke-dasharray="${pct.toFixed(2)} ${(C - pct).toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"/>`;
+    offset -= pct;
+    return seg;
+  }).join('');
+
+  wrap.innerHTML = `<svg viewBox="0 0 42 42">
+    <circle cx="21" cy="21" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="7"/>
+    ${segs}
+  </svg>
+  <div class="pie-center"><div class="pc-val">${entries.length}</div><div class="pc-lbl">Subjects</div></div>`;
+
+  legend.innerHTML = entries.map(([sub, c]) => {
+    const pct = Math.round((c / total) * 100);
+    return `<div class="legend-item"><span class="legend-swatch" style="background:${subjColor(sub)}"></span><span>${escapeHtml(sub)}</span><span class="lg-count">${pct}%</span></div>`;
+  }).join('');
+}
+
+function updateStats() {
+  const scope = sessionsInTimeframe();
+  // Only two figures kept — Sessions + Time spent. Subject mix lives in the pie.
+  document.getElementById('stat-sessions').textContent = scope.length;
+  document.getElementById('stat-time').textContent = formatDuration(scope.reduce((a,s) => a + (s.durationSeconds||0), 0));
+  renderSubjectPie(scope);
+}
+
+let weekNoteDismissed = false;
+function dismissWeekNote() {
+  weekNoteDismissed = true;
+  const n = document.getElementById('week-note');
+  if (n) n.classList.add('hidden');
+}
+
+function renderSummaryResult(flags, savedAtIso, headline) {
+  const stamp = document.getElementById('summary-saved-at');
+  if (stamp) {
+    const when = savedAtIso ? new Date(savedAtIso) : null;
+    const ago = when ? relativeTime(when) : '';
+    stamp.textContent = ago ? `Updated ${ago}` : '';
+  }
+  // Week-in-a-line note (dismissible). Shows only when the summary has a headline.
+  const note = document.getElementById('week-note');
+  const noteText = document.getElementById('week-note-text');
+  if (note && noteText) {
+    if (headline && String(headline).trim()) {
+      noteText.textContent = String(headline).trim();
+      weekNoteDismissed = false;            // a fresh summary re-shows the note
+      note.classList.remove('hidden');
+    } else {
+      note.classList.add('hidden');
+    }
+  }
+  const TAGS = { '🌟': ['Highlight', 'hl'], '💡': ['Idea', 'idea'], '⚠️': ['Note', ''], '🚨': ['Urgent', 'urgent'], '✅': ['All good', 'hl'] };
+  const ORDER = { '🚨': 0, '⚠️': 1, '🌟': 2, '✅': 2, '💡': 3 };
+  const sorted = (flags && flags.length) ? [...flags].sort((a, b) => (ORDER[a.icon] ?? 9) - (ORDER[b.icon] ?? 9)) : [];
+  document.getElementById('flag-list').innerHTML = sorted.length
+    ? sorted.map(f => { const t = TAGS[f.icon] || ['Note', '']; const u = f.icon === '🚨' ? ' urgent' : ''; return `<div class="flag-item${u}"><span class="flag-tag ${t[1]}">${t[0]}</span><span>${escapeHtml(f.text)}</span></div>`; }).join('')
+    : `<div class="flag-item"><span class="flag-tag hl">All good</span><span>No concerns this period. Aden is engaging well!</span></div>`;
+  lastFlags = flags || [];
+  renderAskChips();
+  renderAttention();
+}
+
+function relativeTime(d) {
+  const s = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s/60)}m ago`;
+  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+  const days = Math.floor(s/86400);
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+async function loadCachedSummary() {
+  // Pull the most recent saved summary from Supabase and show it instantly (no Claude call)
+  const stamp = document.getElementById('summary-saved-at');
+  try {
+    const res = await fetch(
+      `${config.supabaseUrl}/rest/v1/summaries?order=created_at.desc&limit=1`,
+      { headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}` } }
+    );
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows.length) {
+        const r = rows[0];
+        let flags = [];
+        try { flags = typeof r.flags === 'string' ? JSON.parse(r.flags) : (r.flags || []); } catch(e) { flags = []; }
+        renderSummaryResult(flags, r.created_at, r.headline);
+        if (r.content) {
+          document.getElementById('ai-summary-text').innerHTML = renderSummaryMarkdown(r.content);
+          document.getElementById('col-written').classList.remove('hidden');
+        }
+        return;
       }
-    });
+    }
+  } catch(e) { console.warn('No cached summary yet', e); }
+  // Nothing saved yet — leave the AI card hidden, prompt via the button
+  renderAskChips();
+}
+
+async function generateSummary() {
+  const scope = sessionsInTimeframe();
+  if (!scope.length) {
+    alert('No sessions in this period yet. Pick a wider timeframe or wait for Aden to do some sessions.');
+    return;
   }
+  document.getElementById('loading-bar-wrap').classList.remove('hidden');
+  document.querySelector('.refresh-btn').disabled = true;
+  try {
+    const res = await fetch(config.summaryWebhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'summary',
+        timeframe: getTimeframeLabel(),
+        sessions: scope.map(s => ({
+          subject: s.subject, date: s.date, messageCount: s.messages.length,
+          messages: s.messages.map(m => ({ role: m.role, content: (m.text || '').slice(0, 300) }))
+        }))
+      })
+    });
+    const data = await res.json();
+    const flags = data.flags || [];
+    renderSummaryResult(flags, new Date().toISOString(), data.headline);
+    if (data.summary) {
+      document.getElementById('ai-summary-text').innerHTML = renderSummaryMarkdown(data.summary);
+      document.getElementById('col-written').classList.remove('hidden');
+    }
+    lastGeneratedTimeframe = document.getElementById('timeframe-select').value;
+  } catch(e) {
+    alert('Could not refresh. Make sure the summary workflow is active in n8n.');
+    console.error(e);
+  }
+  document.getElementById('loading-bar-wrap').classList.add('hidden');
+  document.querySelector('.refresh-btn').disabled = false;
+}
 
-  return { load, render, get data(){ return data; } };
-})();
+/* ══════ PARENT Q&A ══════ */
+let askHistory = [];
+let lastFlags = [];
+let currentChips = [];
+
+const ASK_CHIPS = [
+  { icon: '📋', label: 'Summarise this week', q: "Give me a short, friendly overview of how Aden has been doing this week — what he worked on, how he engaged, and anything notable.", lead: true },
+  { icon: '💚', label: 'How is he doing emotionally?', q: 'How is Aden doing emotionally? Is he confident, frustrated, anxious or happy based on how he communicated?' },
+  { icon: '🧠', label: 'Is he really thinking?', q: 'Is Aden genuinely thinking and learning, or is he just guessing and trying to get answers out of the tutor?' },
+  { icon: '📉', label: 'What did he struggle with?', q: 'What did Aden struggle with most this period? Be specific about topics or concepts.' },
+  { icon: '🙋', label: 'One thing I can do to help', q: "What is the single most useful thing I can do at home this week to support Aden's learning?" },
+  { icon: '🔍', label: 'Anything I should be aware of', q: 'Is there anything I should be aware of — anything concerning, off-topic, or worth a gentle check-in? Quote it exactly if so.' },
+  { icon: '⏱️', label: 'Is he using it a healthy amount?', q: 'Is Aden using this tutor a healthy amount, or leaning on it too heavily? What does his usage pattern look like?' },
+];
+
+const MAX_ASK_CHIPS = 5;
+
+function renderAskChips() {
+  const wrap = document.getElementById('ask-chips');
+  if (!wrap) return;
+
+  // Pinned chips always show first: a flag chip (if flagged this period), then
+  // the "Summarise this week" lead chip. The rest of the slots are filled with a
+  // random pick from the remaining chips, reshuffled each time the view opens.
+  const pinned = [];
+  const hasUrgent = (lastFlags || []).some(f => (f.icon || '') === '🚨');
+  const hasConcern = (lastFlags || []).some(f => (f.icon || '') === '⚠️');
+  if (hasUrgent) {
+    pinned.push({ icon: '🚨', label: 'What did you flag?', q: 'You flagged something urgent this period. What exactly was it? Quote the actual message or moment.' });
+  } else if (hasConcern) {
+    pinned.push({ icon: '⚠️', label: 'What did you flag?', q: 'You flagged a concern this period. What exactly was it? Quote the actual message or moment.' });
+  }
+  const lead = ASK_CHIPS.find(c => c.lead);
+  if (lead) pinned.push(lead);
+
+  const rest = ASK_CHIPS.filter(c => !c.lead);
+  for (let i = rest.length - 1; i > 0; i--) { // Fisher-Yates shuffle
+    const j = Math.floor(Math.random() * (i + 1));
+    [rest[i], rest[j]] = [rest[j], rest[i]];
+  }
+  const chips = [...pinned, ...rest].slice(0, MAX_ASK_CHIPS);
+
+  currentChips = chips;
+  wrap.classList.remove('hidden');
+  wrap.innerHTML = chips.map((c, i) =>
+    `<button type="button" class="ask-chip" onclick="sendChip(${i})">${escapeHtml(c.label)}</button>`
+  ).join('');
+}
+
+function sendChip(i) {
+  const c = currentChips[i];
+  if (c) askQuestion(c.q);
+}
+
+function handleAskKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askQuestion(); } }
+
+function appendAskMsg(role, text) {
+  const thread = document.getElementById('ask-thread');
+  const isParent = role === 'parent';
+  const div = document.createElement('div');
+  div.className = 'ask-msg ' + (isParent ? 'parent' : 'assistant');
+  const content = isParent ? escapeHtml(text) : renderSummaryMarkdown(text);
+  div.innerHTML = `<div class="ask-bubble">${content}</div>`;
+  thread.appendChild(div);
+  return div;
+}
+
+async function askQuestion(presetQ) {
+  const input = document.getElementById('ask-input');
+  const q = (presetQ != null ? presetQ : input.value).trim();
+  if (!q) return;
+  const btn = document.getElementById('ask-send-btn');
+  if (presetQ == null) { input.value = ''; input.style.height = ''; }
+  btn.disabled = true;
+
+  // Chips are training wheels — hide them once the parent has asked something
+  const chipWrap = document.getElementById('ask-chips');
+  if (chipWrap) chipWrap.classList.add('hidden');
+
+  appendAskMsg('parent', q);
+  const thinking = appendAskMsg('assistant', '…');
+
+  const scope = sessionsInTimeframe();
+  try {
+    const res = await fetch(config.askWebhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'ask',
+        question: q,
+        timeframe: getTimeframeLabel(),
+        history: askHistory.slice(-6),
+        sessions: scope.map(s => ({
+          subject: s.subject, date: s.date, messageCount: s.messages.length,
+          messages: s.messages.map(m => ({ role: m.role, content: (m.text || '').slice(0, 500) }))
+        }))
+      })
+    });
+    const data = await res.json();
+    const answer = data.answer || data.reply || data.summary || "I couldn't find an answer to that in the sessions.";
+    thinking.querySelector('div').innerHTML = renderSummaryMarkdown(answer);
+    askHistory.push({ role: 'parent', content: q });
+    askHistory.push({ role: 'assistant', content: answer });
+  } catch(e) {
+    thinking.querySelector('div').innerHTML = "Couldn't reach the server. Check the workflow is active and try again.";
+    console.error(e);
+  }
+  btn.disabled = false;
+  const askThread = document.getElementById('ask-thread');
+  askThread.scrollTo({ top: askThread.scrollHeight, behavior: 'smooth' });
+}
+
+/* ══════ HELPERS ══════ */
+function updateSessionStatus() {
+  if (currentRole === 'parent') return;
+  const c = sessionMessages.length;
+  document.getElementById('session-status').textContent = c === 0 ? 'Ready to learn' : `${Math.ceil(c/2)} question${Math.ceil(c/2)!==1?'s':''} explored`;
+  document.getElementById('session-count').textContent = c > 0 ? `${Math.ceil(c/2)} exchange${Math.ceil(c/2)!==1?'s':''}` : '';
+}
+function sessionTitle(messages) {
+  // Use Aden's first real question as the summary line for the session
+  const firstUser = (messages || []).find(m => m.role === 'user' && (m.text || '').trim());
+  let t = firstUser ? firstUser.text.trim() : '';
+  if (!t) {
+    const hasPhoto = (messages || []).some(m => m.photo);
+    return hasPhoto ? '📸 Homework photo' : 'Chat session';
+  }
+  t = t.replace(/\s+/g, ' ');
+  return t.length > 60 ? t.slice(0, 60).trim() + '…' : t;
+}
+function escapeHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function renderSummaryMarkdown(raw) {
+  const lines = (raw || '').split('\n');
+  let html = '', inList = false;
+  const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+  const inline = t => escapeHtml(t)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+  for (let line of lines) {
+    const t = line.trim();
+    if (!t) { closeList(); continue; }
+    if (t === '---') { closeList(); html += '<hr class="sum-hr">'; continue; }
+    let m;
+    if ((m = t.match(/^#{1,6}\s+(.*)$/))) { closeList(); html += `<div class="sum-h">${inline(m[1])}</div>`; continue; }
+    if ((m = t.match(/^[-*•]\s+(.*)$/))) {
+      if (!inList) { html += '<ul class="sum-ul">'; inList = true; }
+      html += `<li>${inline(m[1])}</li>`; continue;
+    }
+    closeList();
+    html += `<p class="sum-p">${inline(t)}</p>`;
+  }
+  closeList();
+  return html;
+}
+function formatDuration(secs) {
+  if (secs < 60) return secs + 's';
+  const m = Math.round(secs / 60);
+  if (m < 60) return m + 'm';
+  const h = Math.floor(m / 60), rm = m % 60;
+  return rm ? `${h}h ${rm}m` : `${h}h`;
+}
+function formatTime(d) { return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+function formatDate(iso) { return new Date(iso).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }); }
+function formatDateTime(iso) { return formatDate(iso) + ' · ' + formatTime(new Date(iso)); }
+
+/* Populate the login mascot as soon as the page loads, and auto-resume role */
+document.addEventListener('DOMContentLoaded', () => {
+  const lm = document.getElementById('login-mascot'); if (lm) lm.innerHTML = MASCOT_SVG;
+  document.querySelectorAll('.js-mascot, .js-mascot-plain').forEach(e => { e.innerHTML = MASCOT_SVG; });
+  // FIX: if a role was saved this session (survives refresh, clears on tab close
+  // or logout), skip the login screen and go straight back in.
+  try {
+    const saved = sessionStorage.getItem('sf_role');
+    if (saved && PASSWORDS[saved]) {
+      currentRole = saved;
+      document.getElementById('login-screen').style.display = 'none';
+      initApp();
+    }
+  } catch(e) {}
+});
 </script>
-
-
-<!-- ───────────────── PART C · call it when the Overview tab shows ─────────────────
-     In YOUR switchPSub(sub) function, after it makes 'overview' visible, add:
-
-         if (sub === 'overview' && window.SFOverview) SFOverview.load();
-
-     (Your switchPSub already runs updateStats() etc. — put the line right there.)
-     Also call SFOverview.load() once after your initial sessions have loaded,
-     so the Overview is populated the first time the parent opens it.
-     ───────────────────────────────────────────────────────────────────────────── -->
+</body>
+</html>
