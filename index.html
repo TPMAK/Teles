@@ -509,65 +509,65 @@
 #sfo-root *{ box-sizing:border-box; }
 #sfo-root button{ font-family:inherit; }
 #sfo-root .sfo-titlerow{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
-#sfo-root .sfo-h1{ font-family:var(--f-display); font-size:30px; font-weight:700; line-height:1.1; margin:0; }
-#sfo-root .sfo-stamp{ color:var(--sfo-muted); font-size:13px; margin-top:4px; }
-#sfo-root .sfo-refresh{ flex-shrink:0; width:44px; height:44px; border-radius:50%; background:#fff;
+#sfo-root .sfo-h1{ font-family:var(--f-display); font-size:22px; font-weight:700; line-height:1.12; margin:0; }
+#sfo-root .sfo-stamp{ color:var(--sfo-muted); font-size:12px; margin-top:3px; }
+#sfo-root .sfo-refresh{ flex-shrink:0; width:38px; height:38px; border-radius:50%; background:#fff;
   border:1px solid var(--sfo-line); color:var(--sfo-ink); display:flex; align-items:center; justify-content:center; cursor:pointer; }
-#sfo-root .sfo-period{ display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; }
+#sfo-root .sfo-period{ display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
 #sfo-root .sfo-period::-webkit-scrollbar{ display:none; }
-#sfo-root .sfo-period button{ flex:0 0 auto; padding:11px 20px; border-radius:24px; border:1px solid var(--sfo-line);
-  background:#fff; color:var(--sfo-ink); font-size:15px; font-weight:600; cursor:pointer; white-space:nowrap; }
+#sfo-root .sfo-period button{ flex:0 0 auto; padding:8px 16px; border-radius:20px; border:1px solid var(--sfo-line);
+  background:#fff; color:var(--sfo-ink); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
 #sfo-root .sfo-period button.sfo-on{ background:var(--sfo-navy); color:#fff; border-color:var(--sfo-navy); }
-#sfo-root .sfo-note{ display:flex; gap:12px; align-items:flex-start; background:var(--sfo-gold-tint);
-  border:1px solid var(--sfo-gold-line); border-radius:16px; padding:14px 16px; }
-#sfo-root .sfo-note-ico{ width:28px; height:28px; border-radius:9px; background:var(--sfo-gold); color:var(--sfo-navy);
+#sfo-root .sfo-note{ display:flex; gap:10px; align-items:flex-start; background:var(--sfo-gold-tint);
+  border:1px solid var(--sfo-gold-line); border-radius:14px; padding:11px 13px; }
+#sfo-root .sfo-note-ico{ width:22px; height:22px; border-radius:7px; background:var(--sfo-gold); color:var(--sfo-navy);
   display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
-#sfo-root .sfo-note-k{ font-size:12px; font-weight:700; color:var(--sfo-gold-ink); letter-spacing:.5px; text-transform:uppercase; }
-#sfo-root .sfo-note-t{ font-size:17px; line-height:1.35; margin-top:3px; font-weight:500; }
+#sfo-root .sfo-note-k{ font-size:11px; font-weight:700; color:var(--sfo-gold-ink); letter-spacing:.3px; text-transform:uppercase; }
+#sfo-root .sfo-note-t{ font-size:13.5px; line-height:1.35; margin-top:2px; font-weight:500; }
 #sfo-root .sfo-note-body{ flex-grow:1; }
-#sfo-root .sfo-note-x{ background:none; border:none; color:var(--sfo-gold-ink); cursor:pointer; padding:4px; margin:-4px -6px 0 0; flex-shrink:0; }
-#sfo-root .sfo-card{ background:#fff; border-radius:20px; padding:18px 20px; box-shadow:0 1px 2px rgba(20,34,51,.05); }
+#sfo-root .sfo-note-x{ background:none; border:none; color:var(--sfo-gold-ink); cursor:pointer; padding:2px; margin:-2px -4px 0 0; flex-shrink:0; }
+#sfo-root .sfo-card{ background:#fff; border-radius:16px; padding:13px 16px; box-shadow:0 1px 2px rgba(20,34,51,.05); }
 #sfo-root .sfo-muted{ color:var(--sfo-muted); }
-#sfo-root .sfo-ts-head{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:14px; }
-#sfo-root .sfo-ts-head .sfo-t{ font-family:var(--f-display); font-size:20px; font-weight:700; }
-#sfo-root .sfo-ts-stats{ display:flex; gap:16px; align-items:baseline; }
-#sfo-root .sfo-ts-stats b{ font-size:20px; font-weight:700; }
-#sfo-root .sfo-ts-body{ display:flex; align-items:center; gap:18px; }
-#sfo-root .sfo-donut{ position:relative; width:104px; height:104px; flex-shrink:0; }
-#sfo-root .sfo-donut .sfo-ring{ width:104px; height:104px; border-radius:50%; }
+#sfo-root .sfo-ts-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+#sfo-root .sfo-ts-head .sfo-t{ font-family:var(--f-display); font-size:15px; font-weight:700; }
+#sfo-root .sfo-ts-stats{ display:flex; gap:14px; align-items:baseline; }
+#sfo-root .sfo-ts-stats b{ font-size:16px; font-weight:700; }
+#sfo-root .sfo-ts-body{ display:flex; align-items:center; gap:16px; }
+#sfo-root .sfo-donut{ position:relative; width:88px; height:88px; flex-shrink:0; }
+#sfo-root .sfo-donut .sfo-ring{ width:88px; height:88px; border-radius:50%; }
 #sfo-root .sfo-donut .sfo-hole{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-  width:66px; height:66px; border-radius:50%; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-#sfo-root .sfo-donut .sfo-hole b{ font-size:22px; font-weight:700; line-height:1; font-family:var(--f-display); }
-#sfo-root .sfo-legend{ flex-grow:1; display:flex; flex-direction:column; gap:10px; }
-#sfo-root .sfo-legend .sfo-row{ display:flex; align-items:center; gap:10px; font-size:16px; }
+  width:56px; height:56px; border-radius:50%; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+#sfo-root .sfo-donut .sfo-hole b{ font-size:19px; font-weight:700; line-height:1; font-family:var(--f-display); }
+#sfo-root .sfo-legend{ flex-grow:1; display:flex; flex-direction:column; gap:8px; }
+#sfo-root .sfo-legend .sfo-row{ display:flex; align-items:center; gap:8px; font-size:13px; }
 #sfo-root .sfo-legend .sfo-row span:nth-child(2){ flex-grow:1; }
 #sfo-root .sfo-legend .sfo-row b{ font-weight:700; }
-#sfo-root .sfo-dot{ width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+#sfo-root .sfo-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
 #sfo-root .sfo-tabs{ display:flex; border-bottom:1px solid var(--sfo-line); }
-#sfo-root .sfo-tabs button{ flex:1; padding:11px 0 10px; background:none; border:none; border-bottom:2px solid transparent;
-  color:#8a8f9a; font-size:16px; font-weight:500; cursor:pointer; }
+#sfo-root .sfo-tabs button{ flex:1; padding:9px 0 8px; background:none; border:none; border-bottom:2px solid transparent;
+  color:#8a8f9a; font-size:13px; font-weight:500; cursor:pointer; }
 #sfo-root .sfo-tabs button.sfo-on{ color:var(--sfo-ink); font-weight:700; border-bottom-color:var(--sfo-navy); }
 #sfo-root .sfo-pane{ min-height:60px; }
-#sfo-root .sfo-tag{ font-size:12px; font-weight:600; padding:4px 11px; border-radius:20px; display:inline-block; height:fit-content; }
-#sfo-root .sfo-grow{ padding:9px 0; display:flex; gap:12px; }
-#sfo-root .sfo-txt{ font-size:16px; line-height:1.4; flex-grow:1; }
+#sfo-root .sfo-tag{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; display:inline-block; height:fit-content; }
+#sfo-root .sfo-grow{ padding:6px 0; display:flex; gap:10px; }
+#sfo-root .sfo-txt{ font-size:13px; line-height:1.4; flex-grow:1; }
 #sfo-root .sfo-div{ height:1px; background:#eee9df; }
-#sfo-root .sfo-flag{ display:flex; gap:12px; padding:13px 14px; border-radius:14px; align-items:flex-start; margin-bottom:8px;
+#sfo-root .sfo-flag{ display:flex; gap:11px; padding:11px 12px; border-radius:12px; align-items:flex-start; margin-bottom:8px;
   background:var(--sfo-coral-tint); border:1px solid var(--sfo-coral-line); }
-#sfo-root .sfo-flag .sfo-txt{ font-size:17px; font-weight:600; }
-#sfo-root .sfo-flag .sfo-act{ margin-top:8px; background:none; border:none; padding:0; font-size:15px; font-weight:700; color:var(--sfo-coral-dark); cursor:pointer; }
-#sfo-root .sfo-fullbtn{ margin-top:10px; width:100%; background:#f6f4ee; border:none; border-radius:14px; padding:13px 0; font-size:15px; font-weight:600; color:var(--sfo-ink); cursor:pointer; }
-#sfo-root .sfo-foryou{ display:flex; flex-direction:column; gap:10px; }
-#sfo-root .sfo-coach{ border-radius:16px; padding:14px 16px; }
-#sfo-root .sfo-coach .sfo-hd{ display:flex; align-items:center; gap:9px; }
-#sfo-root .sfo-coach .sfo-ico{ width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-#sfo-root .sfo-coach .sfo-nm{ font-size:16px; font-weight:700; flex-grow:1; }
-#sfo-root .sfo-coach .sfo-cta{ background:none; border:none; padding:0; font-size:14px; font-weight:700; color:var(--sfo-ink); cursor:pointer; }
-#sfo-root .sfo-coach .sfo-desc{ font-size:15px; line-height:1.4; margin-top:6px; }
-#sfo-root .sfo-dots{ display:flex; justify-content:center; gap:8px; padding:2px 0; }
-#sfo-root .sfo-dots span{ width:8px; height:8px; border-radius:50%; background:#d5d1c6; cursor:pointer; }
+#sfo-root .sfo-flag .sfo-txt{ font-size:14px; font-weight:600; }
+#sfo-root .sfo-flag .sfo-act{ margin-top:7px; background:none; border:none; padding:0; font-size:12.5px; font-weight:700; color:var(--sfo-coral-dark); cursor:pointer; }
+#sfo-root .sfo-fullbtn{ margin-top:8px; width:100%; background:#f6f4ee; border:none; border-radius:12px; padding:10px 0; font-size:13px; font-weight:600; color:var(--sfo-ink); cursor:pointer; }
+#sfo-root .sfo-foryou{ display:flex; flex-direction:column; gap:9px; }
+#sfo-root .sfo-coach{ border-radius:14px; padding:11px 14px; }
+#sfo-root .sfo-coach .sfo-hd{ display:flex; align-items:center; gap:8px; }
+#sfo-root .sfo-coach .sfo-ico{ width:22px; height:22px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+#sfo-root .sfo-coach .sfo-nm{ font-size:14px; font-weight:700; flex-grow:1; }
+#sfo-root .sfo-coach .sfo-cta{ background:none; border:none; padding:0; font-size:12px; font-weight:700; color:var(--sfo-ink); cursor:pointer; }
+#sfo-root .sfo-coach .sfo-desc{ font-size:13px; line-height:1.4; margin-top:5px; }
+#sfo-root .sfo-dots{ display:flex; justify-content:center; gap:7px; padding:2px 0; }
+#sfo-root .sfo-dots span{ width:7px; height:7px; border-radius:50%; background:#d5d1c6; cursor:pointer; }
 #sfo-root .sfo-dots span.sfo-on{ background:var(--sfo-navy); }
-#sfo-root .sfo-full{ margin-top:10px; font-size:15px; line-height:1.55; }
+#sfo-root .sfo-full{ margin-top:10px; font-size:13px; line-height:1.5; }
 
 /* ===== Responsive overview switch =====
    Phones: compact #sfo-root (own title + pills). Desktop: the full-width original (#ov-legacy). */
@@ -575,15 +575,37 @@
 @media (max-width:899px){
   body.sfo-overview .pagehead{ display:none !important; }    /* phones: compact has its own header */
 }
+.ph-right{ display:flex; align-items:center; gap:12px; }
+.ph-refresh{ display:none; }
 @media (min-width:900px){
   #sfo-root{ display:none !important; }                      /* desktop: hide the compact column */
   #ov-legacy{ display:flex; flex-direction:column; gap:24px; }
+  /* desktop top-right refresh, only on the parent Overview */
+  body.sfo-overview .ph-refresh{ display:flex; width:44px; height:44px; border-radius:50%; background:var(--surface);
+    border:1px solid var(--border); align-items:center; justify-content:center; color:var(--text); cursor:pointer; flex-shrink:0; }
+  body.sfo-overview .ph-refresh:hover{ border-color:var(--navy); }
   /* Expand the For you / At a glance carousel into stacked full-width sections (use the space) */
   #ov-legacy .pctabs, #ov-legacy .pcdots{ display:none; }
   #ov-legacy .pcviewport{ overflow:visible; height:auto !important; }
   #ov-legacy .pctrack{ transform:none !important; flex-direction:column; gap:24px; }
   #ov-legacy .pcpane{ min-width:0; width:100%; }
 }
+
+/* ===== Sessions list — cards with a Summarise chip ===== */
+#parent-session-list{ display:flex; flex-direction:column; gap:14px; }
+.scard{ background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:16px 18px; display:flex; flex-direction:column; gap:10px; }
+.scard-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.scard-when{ font-size:13px; color:var(--text2); white-space:nowrap; }
+.scard-title{ font-family:var(--f-display); font-weight:700; font-size:18px; line-height:1.25; text-align:left; background:none; border:none; padding:0; color:var(--text); cursor:pointer; }
+.scard-title:hover{ text-decoration:underline; }
+.ss-prev{ font-size:15px; line-height:1.5; color:var(--text2); }
+.ss-summary{ background:var(--gold-tint); border:1px solid var(--gold-line); border-radius:14px; padding:12px 14px; display:flex; gap:8px; font-size:15px; line-height:1.45; color:var(--text); }
+.ss-spark{ color:var(--gold-dark); font-weight:700; }
+.ss-chips{ display:flex; gap:8px; flex-wrap:wrap; }
+.ss-chip{ min-height:40px; padding:0 16px; border-radius:20px; border:1px solid var(--border); background:var(--surface); font-size:14px; font-weight:600; color:var(--text); cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+.ss-chip:hover{ border-color:var(--navy); }
+.ss-chip:disabled{ opacity:.6; cursor:default; }
+.ss-summarise{ align-self:flex-start; }
 </style>
 </head>
 <body>
@@ -666,18 +688,23 @@
         <h1 id="page-title">Today's session</h1>
         <div class="ph-sub"><span id="session-status">Ready to learn</span><span id="session-count"></span></div>
       </div>
-      <div class="tf hidden" id="tf-pills" role="group" aria-label="Timeframe">
-        <button type="button" class="tf-btn active" data-v="7" onclick="setTimeframe('7')">This week</button>
-        <button type="button" class="tf-btn" data-v="14" onclick="setTimeframe('14')">2 weeks</button>
-        <button type="button" class="tf-btn" data-v="30" onclick="setTimeframe('30')">This month</button>
-        <button type="button" class="tf-btn" data-v="all" onclick="setTimeframe('all')">All time</button>
+      <div class="ph-right">
+        <div class="tf hidden" id="tf-pills" role="group" aria-label="Timeframe">
+          <button type="button" class="tf-btn active" data-v="7" onclick="setTimeframe('7')">This week</button>
+          <button type="button" class="tf-btn" data-v="14" onclick="setTimeframe('14')">2 weeks</button>
+          <button type="button" class="tf-btn" data-v="30" onclick="setTimeframe('30')">This month</button>
+          <button type="button" class="tf-btn" data-v="all" onclick="setTimeframe('all')">All time</button>
+        </div>
+        <select id="timeframe-select" class="hidden" onchange="onTimeframeChange()" aria-label="Timeframe">
+          <option value="7">This week</option>
+          <option value="14">Last 2 weeks</option>
+          <option value="30">This month</option>
+          <option value="all">All time</option>
+        </select>
+        <button type="button" class="ph-refresh" id="ph-refresh" onclick="generateSummary()" aria-label="Refresh" title="Refresh">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+        </button>
       </div>
-      <select id="timeframe-select" class="hidden" onchange="onTimeframeChange()" aria-label="Timeframe">
-        <option value="7">This week</option>
-        <option value="14">Last 2 weeks</option>
-        <option value="30">This month</option>
-        <option value="all">All time</option>
-      </select>
     </header>
 
     <!-- CHAT -->
@@ -794,10 +821,8 @@
       </div>
 
       <div class="psub-view" id="pview-sessions">
-        <div class="card prow-list">
-          <div id="parent-session-list"></div>
-        </div>
-        <div class="card-sub" id="psess-count" style="margin-top:-8px;"></div>
+        <div class="card-sub" id="psess-count"></div>
+        <div id="parent-session-list"></div>
       </div>
 
       <div class="psub-view" id="pview-ask">
@@ -1219,11 +1244,14 @@ function renderSubjectBadges(s) {
 }
 
 /* ══════ PARENT SESSIONS LIST (reuses openSession overlay) ══════ */
+let openSessSummaries = new Set();   // session ids whose 20-word summary is expanded
+let loadingSess = new Set();         // session ids currently being summarised
+
 function renderParentSessions() {
   const scope = sessionsInTimeframe();
   const list = document.getElementById('parent-session-list');
   const count = document.getElementById('psess-count');
-  count.textContent = scope.length ? `${scope.length} session${scope.length !== 1 ? 's' : ''} in ${getTimeframeLabel().toLowerCase()}. Open one to read the conversation.` : '';
+  count.textContent = scope.length ? `${scope.length} session${scope.length !== 1 ? 's' : ''} in ${getTimeframeLabel().toLowerCase()}.` : '';
   if (!scope.length) {
     list.innerHTML = `<div class="empty-state"><div class="big">${mascot()}</div><p>No sessions in this period.<br>Try a wider timeframe.</p></div>`;
     return;
@@ -1232,12 +1260,77 @@ function renderParentSessions() {
     const preview = s.messages.find(m => m.role === 'tutor');
     const pt = preview ? preview.text.slice(0,110) + (preview.text.length > 110 ? '…' : '') : '';
     const title = s.title || sessionTitle(s.messages);
-    return `<button type="button" class="prow" onclick="openSession('${s.id}')">
-      <div class="prow-badges">${renderSubjectBadges(s)}</div>
-      <div class="prow-main"><span class="prow-title">${escapeHtml(title)}</span>${pt ? `<span class="prow-prev">${escapeHtml(pt)}</span>` : ''}</div>
-      <div class="prow-side"><span class="prow-when">${formatDate(s.date)}</span><span class="prow-count">${s.messages.length} messages${s.photoCount > 0 ? ` · ${s.photoCount} photo${s.photoCount !== 1 ? 's' : ''}` : ''}</span></div>
-    </button>`;
+    const when = `${formatDate(s.date)} · ${s.messages.length} message${s.messages.length !== 1 ? 's' : ''}${s.photoCount > 0 ? ` · ${s.photoCount} photo${s.photoCount !== 1 ? 's' : ''}` : ''}`;
+    const open = openSessSummaries.has(s.id) && s.summary;
+    const loading = loadingSess.has(s.id);
+    let body;
+    if (open) {
+      body = `<div class="ss-summary"><span class="ss-spark" aria-hidden="true">✦</span><span>${escapeHtml(s.summary)}</span></div>
+        <div class="ss-chips">
+          <button type="button" class="ss-chip" onclick="hideSessionSummary('${s.id}')">Hide summary</button>
+          <button type="button" class="ss-chip" onclick="askAboutSession('${s.id}')">Ask about this</button>
+        </div>`;
+    } else {
+      body = `${pt ? `<div class="ss-prev">${escapeHtml(pt)}</div>` : ''}
+        <div class="ss-chips">
+          <button type="button" class="ss-chip ss-summarise" ${loading ? 'disabled' : ''} onclick="summariseSession('${s.id}')">
+            ${loading ? 'Summarising…' : '<span class="ss-spark" aria-hidden="true">✦</span> Summarise'}
+          </button>
+        </div>`;
+    }
+    return `<div class="scard">
+      <div class="scard-top"><div class="prow-badges">${renderSubjectBadges(s)}</div><span class="scard-when">${escapeHtml(when)}</span></div>
+      <button type="button" class="scard-title" onclick="openSession('${s.id}')">${escapeHtml(title)}</button>
+      ${body}
+    </div>`;
   }).join('');
+}
+
+// Generate (or reveal) a ~20-word summary for one session, cached in Supabase.
+async function summariseSession(id) {
+  const s = allSessions.find(x => x.id === id);
+  if (!s) return;
+  if (s.summary) { openSessSummaries.add(id); renderParentSessions(); return; }
+  loadingSess.add(id); renderParentSessions();
+  try {
+    const res = await fetch(config.summaryWebhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'session',
+        timeframe: getTimeframeLabel(),
+        sessions: [{
+          subject: s.subject, date: s.date, messageCount: s.messages.length,
+          messages: s.messages.map(m => ({ role: m.role, content: safeSlice(m.text, 300) }))
+        }]
+      })
+    });
+    const data = await res.json();
+    const summary = (data.answer || data.summary || '').trim();
+    if (!summary) throw new Error('empty summary');
+    s.summary = summary;
+    openSessSummaries.add(id);
+    // cache back to Supabase so it's instant (and free) next time
+    fetch(`${config.supabaseUrl}/rest/v1/sessions?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ summary })
+    }).catch(() => {});
+    try { localStorage.setItem('aden_sessions', JSON.stringify(allSessions)); } catch(e) {}
+  } catch(e) {
+    alert('Could not summarise this session. Make sure the summary workflow is active in n8n.');
+    console.error(e);
+  } finally {
+    loadingSess.delete(id);
+    renderParentSessions();
+  }
+}
+function hideSessionSummary(id) { openSessSummaries.delete(id); renderParentSessions(); }
+function askAboutSession(id) {
+  const s = allSessions.find(x => x.id === id);
+  if (!s) return;
+  const title = s.title || sessionTitle(s.messages);
+  askAbout(`Tell me more about Aden's "${title}" session on ${formatDate(s.date)} — what happened and how he seemed.`);
 }
 
 /* ══════ ATTENTION CARDS — each card carries its own next step ══════ */
@@ -1489,6 +1582,7 @@ async function loadSessions() {
         date: r.date,
         photoCount: r.photo_count || 0,
         title: r.title || '',
+        summary: r.summary || '',
         durationSeconds: r.duration_seconds || 0,
         messages: (() => {
           try { return typeof r.messages === 'string' ? JSON.parse(r.messages) : (r.messages || []); }
@@ -1800,6 +1894,16 @@ async function loadCachedSummary() {
   renderAskChips();
 }
 
+// Slice a string without cutting through an emoji (surrogate pair) and strip any
+// stray unpaired surrogate — a lone surrogate makes the JSON body invalid and the
+// Anthropic API rejects the request with a 400 (this is what broke Refresh).
+function safeSlice(str, n) {
+  let s = Array.from(String(str || '')).slice(0, n).join('');
+  s = s.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '');   // lone high surrogate
+  s = s.replace(/(^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '$1'); // lone low surrogate
+  return s;
+}
+
 async function generateSummary() {
   const scope = sessionsInTimeframe();
   if (!scope.length) {
@@ -1817,7 +1921,7 @@ async function generateSummary() {
         timeframe: getTimeframeLabel(),
         sessions: scope.map(s => ({
           subject: s.subject, date: s.date, messageCount: s.messages.length,
-          messages: s.messages.map(m => ({ role: m.role, content: (m.text || '').slice(0, 300) }))
+          messages: s.messages.map(m => ({ role: m.role, content: safeSlice(m.text, 300) }))
         }))
       })
     });
@@ -1931,7 +2035,7 @@ async function askQuestion(presetQ) {
         history: askHistory.slice(-6),
         sessions: scope.map(s => ({
           subject: s.subject, date: s.date, messageCount: s.messages.length,
-          messages: s.messages.map(m => ({ role: m.role, content: (m.text || '').slice(0, 500) }))
+          messages: s.messages.map(m => ({ role: m.role, content: safeSlice(m.text, 500) }))
         }))
       })
     });
@@ -2113,7 +2217,7 @@ window.SFOverview = (function(){
     let acc=0; const segs=(d.subjects.length?d.subjects:[{pct:100,color:'#e6e3da'}])
       .map(x=>{ const s=`${x.color} ${acc}% ${acc+x.pct}%`; acc+=x.pct; return s; }).join(',');
     const legend = d.subjects.map(x=>`<div class="sfo-row"><span class="sfo-dot" style="background:${x.color}"></span><span>${esc(x.label)}</span><b>${x.pct}%</b></div>`).join('')
-      || '<div class="sfo-muted" style="font-size:15px">No sessions in this period yet.</div>';
+      || '<div class="sfo-muted" style="font-size:13px">No sessions in this period yet.</div>';
 
     root.innerHTML = `
       <div class="sfo-titlerow">
@@ -2128,11 +2232,11 @@ window.SFOverview = (function(){
       ${note}
       <div class="sfo-card">
         <div class="sfo-ts-head"><div class="sfo-t">Time &amp; subjects</div>
-          <div class="sfo-ts-stats"><div><b>${esc(d.sessions)}</b> <span class="sfo-muted" style="font-size:13px">sessions</span></div>
-            <div><b>${esc(d.timeText)}</b> <span class="sfo-muted" style="font-size:13px">spent</span></div></div></div>
+          <div class="sfo-ts-stats"><div><b>${esc(d.sessions)}</b> <span class="sfo-muted" style="font-size:11px">sessions</span></div>
+            <div><b>${esc(d.timeText)}</b> <span class="sfo-muted" style="font-size:11px">spent</span></div></div></div>
         <div class="sfo-ts-body">
           <div class="sfo-donut"><div class="sfo-ring" style="background:conic-gradient(${segs})"></div>
-            <div class="sfo-hole"><b>${d.subjects.length}</b><span class="sfo-muted" style="font-size:11px">Subjects</span></div></div>
+            <div class="sfo-hole"><b>${d.subjects.length}</b><span class="sfo-muted" style="font-size:10px">Subjects</span></div></div>
           <div class="sfo-legend">${legend}</div></div>
       </div>
       </div><!-- /sfo-top2 -->
@@ -2149,7 +2253,7 @@ window.SFOverview = (function(){
   function glance(d){
     const sorted=[...d.flags].sort((a,b)=>(ORDER[a.icon]??9)-(ORDER[b.icon]??9));
     let html='<div class="sfo-card">', plain=0;
-    if(!sorted.length) html+='<div class="sfo-muted" style="font-size:15px;padding:6px 0">No notes for this period yet — tap ↻ to generate them.</div>';
+    if(!sorted.length) html+='<div class="sfo-muted" style="font-size:13px;padding:6px 0">No notes for this period yet — tap ↻ to generate them.</div>';
     sorted.forEach(f=>{
       const m=FLAG[f.icon]||FLAG['🌟'];
       if(f.icon==='🚨'){
@@ -2179,7 +2283,7 @@ window.SFOverview = (function(){
           <button class="sfo-cta" style="${c.coral?'color:var(--sfo-coral-dark)':''}" data-ask="${f.icon}">Ask ›</button></div>
         <div class="sfo-desc">${esc(f.text)}</div></div>`;
     }).join('');
-    return `<div class="sfo-foryou">${cards||'<div class="sfo-muted" style="font-size:15px;padding:8px">Nothing to action this week.</div>'}</div>`;
+    return `<div class="sfo-foryou">${cards||'<div class="sfo-muted" style="font-size:13px;padding:8px">Nothing to action this week.</div>'}</div>`;
   }
 
   function md(raw){ if(typeof renderSummaryMarkdown==='function'){ try{ return renderSummaryMarkdown(raw); }catch(e){} }
