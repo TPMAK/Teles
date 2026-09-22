@@ -1,361 +1,295 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>StockFish — Overview (redesign)</title>
+<!--  ═══════════════════════════════════════════════════════════════════
+      STOCKFISH OVERVIEW MODULE  —  collision-proof drop-in
+      ───────────────────────────────────────────────────────────────────
+      WHY YOUR DESKTOP BROKE: the previous paste used global styles
+      (body{}, .phone{}, .card{}, .hidden{}) that overrode your whole app.
+      This version fixes that: every class is prefixed "sfo-" and every
+      CSS rule is scoped under #sfo-root, so it can ONLY affect this widget.
+
+      HOW TO INSTALL (3 steps):
+      1. DELETE the earlier overview <style> block you pasted (the one with
+         body{}, .phone{}, .card{}, .note{}, .tabs{} …). It is what broke
+         desktop. Keep your original app styles.
+      2. Inside your parent Overview view (<div id="pview-overview">…</div>),
+         replace the old overview markup with just:  <div id="sfo-root"></div>
+      3. Paste PART A (style) in <head>, PART B (script) before </body>.
+         Then, in your switchPSub(), add the load call (see PART C).
+      ═══════════════════════════════════════════════════════════════════ -->
+
+
+<!-- ───────────────── PART A · scoped styles (paste in <head>) ───────────────── -->
 <style>
-  /* ── Your real tokens ── */
-  :root{
-    --navy:#1a2233; --ivory:#f4f2ec; --card:#ffffff; --line:#e6e3da;
-    --ink:#1a2233; --muted:#6b7280;
-    --gold:#f2a01e; --gold-tint:#fdeecb; --gold-line:#efd08a; --gold-ink:#8a5a12;
-    --coral:#e23d2e; --coral-dark:#b32619; --coral-tint:#fbe2dd; --coral-line:#f2b9b2;
-    --blue-tint:#d9e4fb; --blue-ink:#284a86;
-    --grey:#8a8ba0;
-    --radius:16px; --radius-sm:14px;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--ivory);color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
-    display:flex;justify-content:center}
-  .phone{width:100%;max-width:430px;min-height:100vh;display:flex;flex-direction:column;background:var(--ivory)}
-
-  /* Header */
-  .top{height:52px;flex-shrink:0;background:var(--navy);display:flex;align-items:center;gap:10px;padding:0 16px}
-  .logo{width:30px;height:30px;border-radius:8px;background:var(--gold);display:flex;align-items:center;justify-content:center}
-  .logo span{width:13px;height:13px;border-radius:50%;background:var(--navy)}
-  .brand{color:#fff;font-size:19px;font-weight:700;flex-grow:1}
-  .iconbtn{background:none;border:none;cursor:pointer;padding:6px;color:#9aa3b2;display:flex}
-
-  .body{flex-grow:1;padding:12px 16px 8px;display:flex;flex-direction:column;gap:10px}
-
-  /* Title row */
-  .titlerow{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-  h1{font-size:20px;font-weight:700;line-height:1.15;margin:0}
-  .stamp{color:var(--muted);font-size:11px;margin-top:3px}
-  .refresh{flex-shrink:0;width:38px;height:38px;border-radius:50%;background:#fff;border:1px solid var(--line);
-    color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 2px rgba(20,34,51,.05)}
-
-  /* Period selector */
-  .period{display:flex;gap:6px}
-  .period button{flex-grow:1;padding:7px 0;border-radius:20px;border:1px solid var(--line);background:#fff;
-    color:var(--ink);font-size:13px;font-weight:600;cursor:pointer}
-  .period button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
-
-  /* Dismissible note */
-  .note{background:var(--gold-tint);border:1px solid var(--gold-line);border-radius:var(--radius-sm);
-    padding:11px 13px;display:flex;gap:10px;align-items:flex-start}
-  .note-ico{width:22px;height:22px;border-radius:7px;background:var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-  .note-kicker{font-size:11px;font-weight:700;color:var(--gold-ink);letter-spacing:.3px;text-transform:uppercase}
-  .note-text{font-size:13.5px;line-height:1.35;margin-top:2px;font-weight:500}
-  .note-x{background:none;border:none;color:var(--gold-ink);cursor:pointer;padding:2px;margin:-2px -4px 0 0;flex-shrink:0;display:flex}
-
-  /* Card */
-  .card{background:var(--card);border-radius:var(--radius);padding:13px 16px;box-shadow:0 1px 2px rgba(20,34,51,.05)}
-  .muted{color:var(--muted)}
-
-  /* Time & subjects */
-  .ts-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-  .ts-head .title{font-size:15px;font-weight:700}
-  .ts-stats{display:flex;gap:14px;align-items:baseline}
-  .ts-stats b{font-size:16px;font-weight:700}
-  .ts-body{display:flex;align-items:center;gap:16px}
-  .donut{position:relative;width:88px;height:88px;flex-shrink:0}
-  .donut .ring{width:88px;height:88px;border-radius:50%}
-  .donut .hole{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:50%;
-    background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
-  .donut .hole b{font-size:19px;font-weight:700;line-height:1}
-  .legend{flex-grow:1;display:flex;flex-direction:column;gap:8px}
-  .legend .row{display:flex;align-items:center;gap:8px;font-size:13px}
-  .legend .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-  .legend .row span:nth-child(2){flex-grow:1}
-  .legend .row b{font-weight:700}
-
-  /* Section tabs */
-  .tabs{display:flex;border-bottom:1px solid var(--line)}
-  .tabs button{flex-grow:1;padding:9px 0 8px;background:none;border:none;border-bottom:2px solid transparent;
-    color:#8a8f9a;font-size:13px;font-weight:500;cursor:pointer}
-  .tabs button.on{color:var(--ink);font-weight:700;border-bottom-color:var(--navy)}
-
-  .pane{flex-grow:1}
-
-  /* At a glance rows */
-  .tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;display:inline-block;height:fit-content}
-  .g-row{display:flex;gap:10px;padding:6px 0}
-  .g-row .txt{font-size:13px;line-height:1.4;flex-grow:1}
-  .divider{height:1px;background:#eee9df}
-  /* emphasised urgent / concern */
-  .g-flag{display:flex;gap:11px;padding:11px 12px;border-radius:12px;align-items:flex-start;margin-bottom:8px}
-  .g-flag.urgent{background:var(--coral-tint);border:1px solid var(--coral-line)}
-  .g-flag.urgent .txt{font-size:14px;font-weight:600}
-  .g-flag .act{margin-top:7px;background:none;border:none;padding:0;font-size:12.5px;font-weight:700;cursor:pointer}
-  .g-flag.urgent .act{color:var(--coral-dark)}
-  .fullbtn{margin-top:8px;width:100%;background:#f6f4ee;border:none;border-radius:12px;padding:10px 0;
-    font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}
-
-  /* For you cards */
-  .foryou{display:flex;flex-direction:column;gap:9px}
-  .coach{border-radius:var(--radius-sm);padding:11px 14px}
-  .coach .head{display:flex;align-items:center;gap:8px}
-  .coach .ico{width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .coach .name{font-size:14px;font-weight:700;flex-grow:1}
-  .coach .cta{background:none;border:none;padding:0;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer}
-  .coach .desc{font-size:13px;line-height:1.4;margin-top:5px}
-
-  /* Dots */
-  .dots{display:flex;justify-content:center;gap:7px;padding:2px 0}
-  .dots span{width:7px;height:7px;border-radius:50%;background:#d5d1c6;cursor:pointer}
-  .dots span.on{background:var(--navy)}
-
-  /* Bottom nav */
-  .nav{height:60px;flex-shrink:0;background:#fff;border-top:1px solid #ece8de;display:flex;align-items:center;justify-content:space-around;padding-bottom:4px}
-  .nav a{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-size:11px;text-decoration:none}
-  .nav a.on{color:#c0492b;font-weight:600}
-
-  .hidden{display:none !important}
+#sfo-root{ --sfo-navy:#1a2233; --sfo-ink:#1a2233; --sfo-muted:#6b7280; --sfo-line:#e6e3da;
+  --sfo-gold:#f2a01e; --sfo-gold-tint:#fdeecb; --sfo-gold-line:#efd08a; --sfo-gold-ink:#8a5a12;
+  --sfo-coral:#e23d2e; --sfo-coral-dark:#b32619; --sfo-coral-tint:#fbe2dd; --sfo-coral-line:#f2b9b2;
+  --sfo-blue-tint:#d9e4fb; --sfo-blue-ink:#284a86;
+  display:flex; flex-direction:column; gap:10px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; color:var(--sfo-ink); }
+#sfo-root *{ box-sizing:border-box; }
+#sfo-root .sfo-titlerow{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+#sfo-root .sfo-h1{ font-size:20px; font-weight:700; line-height:1.15; margin:0; }
+#sfo-root .sfo-stamp{ color:var(--sfo-muted); font-size:11px; margin-top:3px; }
+#sfo-root .sfo-refresh{ flex-shrink:0; width:38px; height:38px; border-radius:50%; background:#fff;
+  border:1px solid var(--sfo-line); color:var(--sfo-ink); display:flex; align-items:center; justify-content:center;
+  cursor:pointer; box-shadow:0 1px 2px rgba(20,34,51,.05); }
+#sfo-root .sfo-period{ display:flex; gap:6px; }
+#sfo-root .sfo-period button{ flex-grow:1; padding:7px 4px; border-radius:20px; border:1px solid var(--sfo-line);
+  background:#fff; color:var(--sfo-ink); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+#sfo-root .sfo-period button.sfo-on{ background:var(--sfo-navy); color:#fff; border-color:var(--sfo-navy); }
+#sfo-root .sfo-note{ background:var(--sfo-gold-tint); border:1px solid var(--sfo-gold-line); border-radius:14px;
+  padding:11px 13px; display:flex; gap:10px; align-items:flex-start; }
+#sfo-root .sfo-note-ico{ width:22px; height:22px; border-radius:7px; background:var(--sfo-gold); color:var(--sfo-navy);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+#sfo-root .sfo-note-k{ font-size:11px; font-weight:700; color:var(--sfo-gold-ink); letter-spacing:.3px; text-transform:uppercase; }
+#sfo-root .sfo-note-t{ font-size:13.5px; line-height:1.35; margin-top:2px; font-weight:500; }
+#sfo-root .sfo-note-x{ background:none; border:none; color:var(--sfo-gold-ink); cursor:pointer; padding:2px; margin:-2px -4px 0 0; flex-shrink:0; display:flex; }
+#sfo-root .sfo-card{ background:#fff; border-radius:16px; padding:13px 16px; box-shadow:0 1px 2px rgba(20,34,51,.05); }
+#sfo-root .sfo-muted{ color:var(--sfo-muted); }
+#sfo-root .sfo-ts-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+#sfo-root .sfo-ts-head .sfo-t{ font-size:15px; font-weight:700; }
+#sfo-root .sfo-ts-stats{ display:flex; gap:14px; align-items:baseline; }
+#sfo-root .sfo-ts-stats b{ font-size:16px; font-weight:700; }
+#sfo-root .sfo-ts-body{ display:flex; align-items:center; gap:16px; }
+#sfo-root .sfo-donut{ position:relative; width:88px; height:88px; flex-shrink:0; }
+#sfo-root .sfo-donut .sfo-ring{ width:88px; height:88px; border-radius:50%; }
+#sfo-root .sfo-donut .sfo-hole{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:56px; height:56px; border-radius:50%; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+#sfo-root .sfo-donut .sfo-hole b{ font-size:19px; font-weight:700; line-height:1; }
+#sfo-root .sfo-legend{ flex-grow:1; display:flex; flex-direction:column; gap:8px; }
+#sfo-root .sfo-legend .sfo-row{ display:flex; align-items:center; gap:8px; font-size:13px; }
+#sfo-root .sfo-legend .sfo-row span:nth-child(2){ flex-grow:1; }
+#sfo-root .sfo-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+#sfo-root .sfo-tabs{ display:flex; border-bottom:1px solid var(--sfo-line); }
+#sfo-root .sfo-tabs button{ flex-grow:1; padding:9px 0 8px; background:none; border:none; border-bottom:2px solid transparent;
+  color:#8a8f9a; font-size:13px; font-weight:500; cursor:pointer; }
+#sfo-root .sfo-tabs button.sfo-on{ color:var(--sfo-ink); font-weight:700; border-bottom-color:var(--sfo-navy); }
+#sfo-root .sfo-tag{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; display:inline-block; height:fit-content; }
+#sfo-root .sfo-grow{ padding:6px 0; display:flex; gap:10px; }
+#sfo-root .sfo-txt{ font-size:13px; line-height:1.4; flex-grow:1; }
+#sfo-root .sfo-div{ height:1px; background:#eee9df; }
+#sfo-root .sfo-flag{ display:flex; gap:11px; padding:11px 12px; border-radius:12px; align-items:flex-start; margin-bottom:8px;
+  background:var(--sfo-coral-tint); border:1px solid var(--sfo-coral-line); }
+#sfo-root .sfo-flag .sfo-txt{ font-size:14px; font-weight:600; }
+#sfo-root .sfo-flag .sfo-act{ margin-top:7px; background:none; border:none; padding:0; font-size:12.5px; font-weight:700; color:var(--sfo-coral-dark); cursor:pointer; }
+#sfo-root .sfo-fullbtn{ margin-top:8px; width:100%; background:#f6f4ee; border:none; border-radius:12px; padding:10px 0; font-size:13px; font-weight:600; color:var(--sfo-ink); cursor:pointer; }
+#sfo-root .sfo-foryou{ display:flex; flex-direction:column; gap:9px; }
+#sfo-root .sfo-coach{ border-radius:14px; padding:11px 14px; }
+#sfo-root .sfo-coach .sfo-hd{ display:flex; align-items:center; gap:8px; }
+#sfo-root .sfo-coach .sfo-ico{ width:22px; height:22px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+#sfo-root .sfo-coach .sfo-nm{ font-size:14px; font-weight:700; flex-grow:1; }
+#sfo-root .sfo-coach .sfo-cta{ background:none; border:none; padding:0; font-size:12px; font-weight:700; color:var(--sfo-ink); cursor:pointer; }
+#sfo-root .sfo-coach .sfo-desc{ font-size:13px; line-height:1.4; margin-top:5px; }
+#sfo-root .sfo-dots{ display:flex; justify-content:center; gap:7px; padding:2px 0; }
+#sfo-root .sfo-dots span{ width:7px; height:7px; border-radius:50%; background:#d5d1c6; cursor:pointer; }
+#sfo-root .sfo-dots span.sfo-on{ background:var(--sfo-navy); }
+#sfo-root .sfo-full{ margin-top:10px; font-size:13px; line-height:1.5; }
 </style>
-</head>
-<body>
-<div class="phone">
-  <div class="top">
-    <div class="logo"><span></span></div>
-    <div class="brand">StockFish</div>
-    <button class="iconbtn" aria-label="Sign out">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
-    </button>
-  </div>
 
-  <div class="body">
-    <div class="titlerow">
-      <div style="flex-grow:1">
-        <h1>How Aden's doing</h1>
-        <div class="stamp" id="stamp">Updated just now · This week</div>
-      </div>
-      <button class="refresh" id="refresh" aria-label="Refresh">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
-      </button>
-    </div>
 
-    <div class="period" id="period"></div>
+<!-- ───────────────── the container (place inside #pview-overview) ───────────────── -->
+<div id="sfo-root"></div>
 
-    <div id="note-slot"></div>
 
-    <div class="card" id="timesubjects"></div>
-
-    <div class="tabs" id="tabs"></div>
-    <div class="pane" id="pane"></div>
-    <div class="dots" id="dots"></div>
-  </div>
-
-  <div class="nav">
-    <a href="#" class="on">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Overview</a>
-    <a href="#">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Sessions</a>
-    <a href="#">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"/><line x1="12" y1="17" x2="12" y2="17"/></svg>Ask</a>
-  </div>
-</div>
-
+<!-- ───────────────── PART B · script (paste before </body>) ───────────────── -->
 <script>
-/* ══════════════════════════════════════════════════════════════
-   DATA — this is the ONLY shape the UI needs. In your app you fill
-   it from Supabase (see loadOverview() at the bottom). The fields
-   map 1:1 to your `summaries` row + your existing sessions stats.
-   ══════════════════════════════════════════════════════════════ */
-const OVERVIEW = {
-  timeframe: 'This week',
-  createdAt: new Date(Date.now() - 29*60*1000).toISOString(), // summaries.created_at
-  headline: 'Good week — engaged and curious, with one small worry to check in on.', // NEW: summaries.headline
-  stats: {
-    sessions: 13,
-    minutes: 53,
-    subjects: [ // derived from your sessions, same as today
-      { label:'General',   pct:54, color:'#8a8ba0' },
-      { label:'Wellbeing', pct:31, color:'#d63c78' },
-      { label:'Hobbies',   pct:8,  color:'#e8622a' },
-      { label:'Science',   pct:8,  color:'#e8a81e' }
-    ]
-  },
-  // flags: exactly your existing summaries.flags shape → {icon, text}
-  flags: [
-    { icon:'🌟', text:'Combined arch & suspension bridge designs unprompted — strong engineering reasoning' },
-    { icon:'⚠️', text:'Worried friends will mock his bike, and felt left out around Pokémon' },
-    { icon:'💡', text:'$100 exam reward — a great hook for real-life maths' }
-  ]
-};
+window.SFOverview = (function(){
+  const ICO = {
+    star:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9"/></svg>',
+    info:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12" y2="8"/></svg>',
+    bulb:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.3 1 2.1h6c0-.8.4-1.5 1-2.1A6 6 0 0 0 12 3z"/></svg>',
+    alert:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12" y2="17"/></svg>'
+  };
+  const FLAG = {
+    '🚨':{label:'Urgent', tagBg:'var(--sfo-coral)', tagFg:'#fff', ico:ICO.alert,
+          coach:{name:'Check in first', bg:'var(--sfo-coral-tint)', ig:'var(--sfo-coral)', ic:'#fff', coral:true,
+                 q:'You flagged something urgent this period. What exactly was it? Quote the actual message or moment.'}},
+    '⚠️':{label:'Watch', tagBg:'#fbdcd0', tagFg:'#9a3a1c', ico:ICO.info,
+          coach:{name:'Worth knowing', bg:'#eef1f5', ig:'#8a93a6', ic:'#fff',
+                 q:'You flagged a concern this period. What exactly was it? Quote the actual message or moment.'}},
+    '🌟':{label:'Highlight', tagBg:'var(--sfo-gold-tint)', tagFg:'var(--sfo-gold-ink)', ico:ICO.star,
+          coach:{name:'Good sign', bg:'var(--sfo-gold-tint)', ig:'var(--sfo-gold)', ic:'var(--sfo-navy)',
+                 q:'What could I genuinely praise Aden for this period? Keep it concrete.'}},
+    '✅':{label:'All good', tagBg:'var(--sfo-gold-tint)', tagFg:'var(--sfo-gold-ink)', ico:ICO.star, coach:null},
+    '💡':{label:'Idea', tagBg:'var(--sfo-blue-tint)', tagFg:'var(--sfo-blue-ink)', ico:ICO.bulb,
+          coach:{name:'Something to try', bg:'#eaf3ec', ig:'#5aa06e', ic:'#fff',
+                 q:'Give me one concrete thing I could do at home based on this period.'}}
+  };
+  const SUBJECT_COLORS = { General:'#8a8ba0', Wellbeing:'#d63c78', Hobbies:'#e8622a', Science:'#e8a81e',
+    Maths:'#3e6be0', Math:'#3e6be0', English:'#7a5cc0', Reading:'#7a5cc0' };
+  const ORDER = { '🚨':0, '⚠️':1, '🌟':2, '✅':2, '💡':3 };
 
-/* Flip to true to preview the 🚨 urgent state without editing data */
-const DEMO_URGENT = false;
-if (DEMO_URGENT) {
-  OVERVIEW.flags.unshift({ icon:'🚨', text:'Said he’s been feeling really low this week — “what’s even the point”' });
-  OVERVIEW.headline = 'A good week overall — with one thing worth a gentle check-in.';
-}
+  let data = null, tab = 0, noteHidden = false, showFull = false;
 
-/* Icon → how it renders. Mirrors your flag vocabulary. */
-const FLAG = {
-  '🚨': { label:'Urgent',    glance:'urgent',  tagBg:'var(--coral)',    tagFg:'#fff',
-          coach:{ name:'Check in first', bg:'var(--coral-tint)', ico:'var(--coral)', icoFg:'#fff', cta:'How ›',
-                  desc:'A gentle, low-pressure opener you could use to check in with him tonight.' } },
-  '⚠️': { label:'Watch',     glance:'',        tagBg:'#fbdcd0', tagFg:'#9a3a1c',
-          coach:{ name:'Worth knowing', bg:'#eef1f5', ico:'#8a93a6', icoFg:'#fff', cta:'Tell me more ›',
-                  desc:null } },
-  '🌟': { label:'Highlight',  glance:'',        tagBg:'var(--gold-tint)', tagFg:'var(--gold-ink)',
-          coach:{ name:'Good sign', bg:'var(--gold-tint)', ico:'var(--gold)', icoFg:'var(--navy)', cta:'What should I praise? ›',
-                  desc:null } },
-  '✅': { label:'All good',   glance:'',        tagBg:'var(--gold-tint)', tagFg:'var(--gold-ink)',
-          coach:{ name:'All good', bg:'var(--gold-tint)', ico:'var(--gold)', icoFg:'var(--navy)', cta:null, desc:null } },
-  '💡': { label:'Idea',       glance:'',        tagBg:'var(--blue-tint)', tagFg:'var(--blue-ink)',
-          coach:{ name:'Something to try', bg:'#eaf3ec', ico:'#5aa06e', icoFg:'#fff', cta:'One thing I can do ›',
-                  desc:null } }
-};
-const ICO = {
-  star:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9"/></svg>',
-  info:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12" y2="8"/></svg>',
-  bulb:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.3 1 2.1h6c0-.8.4-1.5 1-2.1A6 6 0 0 0 12 3z"/></svg>',
-  alert:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><line x1="12" y1="17" x2="12" y2="17"/></svg>'
-};
-function coachIcon(icon){ return icon==='🚨'?ICO.alert : icon==='💡'?ICO.bulb : icon==='⚠️'?ICO.info : ICO.star; }
+  const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function rel(iso){ const s=Math.max(0,(Date.now()-Date.parse(iso))/1000);
+    if(s<60)return'just now'; const m=(s/60)|0; if(m<60)return m+'m ago';
+    const h=(m/60)|0; if(h<24)return h+'h ago'; return ((h/24)|0)+'d ago'; }
 
-/* ── helpers ── */
-function relativeTime(iso){
-  const s = Math.max(0, (Date.now() - Date.parse(iso))/1000);
-  if (s < 60) return 'just now';
-  const m = Math.floor(s/60); if (m < 60) return m+'m ago';
-  const h = Math.floor(m/60); if (h < 24) return h+'h ago';
-  return Math.floor(h/24)+'d ago';
-}
-function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  async function load(){
+    noteHidden = false; showFull = false;
+    const sel = document.getElementById('timeframe-select');
+    const tfKey = sel ? sel.value : '7';
+    const tfLabel = sel ? (sel.options[sel.selectedIndex]||{}).text || 'This week' : 'This week';
 
-/* ── UI state ── */
-let activeTab = 0;                 // 0 = At a glance, 1 = For you
-let noteDismissed = false;
+    // stats from YOUR existing session math
+    let scope = [];
+    try { scope = (typeof sessionsInTimeframe==='function') ? sessionsInTimeframe() : []; } catch(e){}
+    const minutes = Math.round(scope.reduce((a,s)=>a+(s.durationSeconds||s.duration||0),0)/60);
+    const counts = {}; scope.forEach(s=>{ const k=s.subject||'General'; counts[k]=(counts[k]||0)+1; });
+    const total = scope.length || 1;
+    const subjects = Object.entries(counts).sort((a,b)=>b[1]-a[1])
+      .map(([label,c])=>({ label, pct:Math.round(c/total*100), color:SUBJECT_COLORS[label]||'#b8b3a6' }));
 
-/* ── render ── */
-function render(){
-  const d = OVERVIEW;
+    // summary row from Supabase (flags + headline + content)
+    let headline='', content='', flags=[], createdAt=new Date().toISOString();
+    try{
+      const cfg = window.config || {};
+      const res = await fetch(`${cfg.supabaseUrl}/rest/v1/summaries?timeframe=eq.${encodeURIComponent(tfKey)}&order=created_at.desc&limit=1`,
+        { headers:{ apikey:cfg.supabaseKey, Authorization:'Bearer '+cfg.supabaseKey } });
+      const rows = await res.json();
+      const r = rows && rows[0];
+      if(r){ createdAt=r.created_at||createdAt; headline=r.headline||''; content=r.content||'';
+        try{ flags = typeof r.flags==='string' ? JSON.parse(r.flags) : (r.flags||[]); }catch(e){ flags=[]; } }
+    }catch(e){ console.warn('SFOverview load failed', e); }
 
-  document.getElementById('stamp').textContent = 'Updated ' + relativeTime(d.createdAt) + ' · ' + d.timeframe;
+    data = { timeframe:tfLabel, tfKey, createdAt, headline, content,
+             stats:{ sessions:scope.length, minutes, subjects }, flags };
+    render();
+  }
 
-  // period
-  document.getElementById('period').innerHTML =
-    ['This week','2 weeks','Month'].map((p,i)=>`<button class="${i===0?'on':''}">${p}</button>`).join('');
+  function render(){
+    const root = document.getElementById('sfo-root'); if(!root||!data) return;
+    const d = data;
 
-  // dismissible note
-  const slot = document.getElementById('note-slot');
-  if (d.headline && !noteDismissed){
-    slot.innerHTML = `<div class="note">
-      <div class="note-ico" style="color:var(--navy)">${ICO.star}</div>
-      <div style="flex-grow:1">
-        <div class="note-kicker">The week in a line</div>
-        <div class="note-text">${esc(d.headline)}</div>
+    // period pills mirror your <select id="timeframe-select"> options
+    const sel = document.getElementById('timeframe-select');
+    const opts = sel ? [...sel.options].map(o=>({v:o.value,l:o.text})) : [{v:'7',l:'This week'}];
+    const cur = sel ? sel.value : '7';
+    const pills = opts.map(o=>`<button class="${o.v===cur?'sfo-on':''}" data-v="${esc(o.v)}">${esc(o.l)}</button>`).join('');
+
+    const note = (d.headline && !noteHidden) ? `
+      <div class="sfo-note">
+        <div class="sfo-note-ico">${ICO.star}</div>
+        <div style="flex-grow:1"><div class="sfo-note-k">The week in a line</div>
+          <div class="sfo-note-t">${esc(d.headline)}</div></div>
+        <button class="sfo-note-x" data-act="note" aria-label="Dismiss note">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button></div>` : '';
+
+    // donut
+    let acc=0; const stops=(d.stats.subjects.length?d.stats.subjects:[{pct:100,color:'#e6e3da'}])
+      .map(x=>{ const seg=`${x.color} ${acc}% ${acc+x.pct}%`; acc+=x.pct; return seg; }).join(',');
+    const legend = d.stats.subjects.map(x=>`<div class="sfo-row"><span class="sfo-dot" style="background:${x.color}"></span><span>${esc(x.label)}</span><b>${x.pct}%</b></div>`).join('')
+      || '<div class="sfo-muted" style="font-size:13px">No sessions in this period yet.</div>';
+
+    const pane = tab===0 ? glance(d) : foryou(d);
+
+    root.innerHTML = `
+      <div class="sfo-titlerow">
+        <div style="flex-grow:1"><h1 class="sfo-h1">How Aden's doing</h1>
+          <div class="sfo-stamp">Updated ${rel(d.createdAt)} · ${esc(d.timeframe)}</div></div>
+        <button class="sfo-refresh" data-act="refresh" aria-label="Refresh">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+        </button>
       </div>
-      <button class="note-x" id="note-x" aria-label="Dismiss note">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-      </button></div>`;
-    document.getElementById('note-x').onclick = () => { noteDismissed = true; render(); };
-  } else { slot.innerHTML = ''; }
+      <div class="sfo-period">${pills}</div>
+      ${note}
+      <div class="sfo-card">
+        <div class="sfo-ts-head"><div class="sfo-t">Time &amp; subjects</div>
+          <div class="sfo-ts-stats"><div><b>${d.stats.sessions}</b> <span class="sfo-muted" style="font-size:11px">sessions</span></div>
+            <div><b>${d.stats.minutes}m</b> <span class="sfo-muted" style="font-size:11px">spent</span></div></div></div>
+        <div class="sfo-ts-body">
+          <div class="sfo-donut"><div class="sfo-ring" style="background:conic-gradient(${stops})"></div>
+            <div class="sfo-hole"><b>${d.stats.subjects.length}</b><span class="sfo-muted" style="font-size:10px">Subjects</span></div></div>
+          <div class="sfo-legend">${legend}</div></div>
+      </div>
+      <div class="sfo-tabs">
+        <button class="${tab===0?'sfo-on':''}" data-tab="0">At a glance</button>
+        <button class="${tab===1?'sfo-on':''}" data-tab="1">For you</button>
+      </div>
+      <div>${pane}</div>
+      <div class="sfo-dots"><span class="${tab===0?'sfo-on':''}" data-tab="0"></span><span class="${tab===1?'sfo-on':''}" data-tab="1"></span></div>`;
 
-  // time & subjects
-  renderTimeSubjects(d.stats);
+    wire(root);
+  }
 
-  // tabs + pane
-  const tabs = ['At a glance','For you'];
-  document.getElementById('tabs').innerHTML =
-    tabs.map((t,i)=>`<button class="${i===activeTab?'on':''}" data-t="${i}">${t}</button>`).join('');
-  document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => { activeTab = +b.dataset.t; render(); });
-  document.getElementById('dots').innerHTML =
-    tabs.map((_,i)=>`<span class="${i===activeTab?'on':''}" data-t="${i}"></span>`).join('');
-  document.querySelectorAll('#dots span').forEach(s => s.onclick = () => { activeTab = +s.dataset.t; render(); });
-
-  document.getElementById('pane').innerHTML = activeTab===0 ? glanceHTML(d.flags) : forYouHTML(d.flags);
-}
-
-function renderTimeSubjects(s){
-  // build the donut gradient from cumulative %
-  let acc = 0;
-  const stops = s.subjects.map(x => { const seg = `${x.color} ${acc}% ${acc+x.pct}%`; acc += x.pct; return seg; }).join(',');
-  const legend = s.subjects.map(x =>
-    `<div class="row"><span class="dot" style="background:${x.color}"></span><span>${esc(x.label)}</span><b>${x.pct}%</b></div>`).join('');
-  document.getElementById('timesubjects').innerHTML = `
-    <div class="ts-head">
-      <div class="title">Time &amp; subjects</div>
-      <div class="ts-stats"><div><b>${s.sessions}</b> <span class="muted" style="font-size:11px">sessions</span></div>
-        <div><b>${s.minutes}m</b> <span class="muted" style="font-size:11px">spent</span></div></div>
-    </div>
-    <div class="ts-body">
-      <div class="donut"><div class="ring" style="background:conic-gradient(${stops})"></div>
-        <div class="hole"><b>${s.subjects.length}</b><span class="muted" style="font-size:10px">Subjects</span></div></div>
-      <div class="legend">${legend}</div>
-    </div>`;
-}
-
-/* At a glance — urgent/concern emphasised, rest as plain rows */
-function glanceHTML(flags){
-  const order = { '🚨':0, '⚠️':1, '🌟':2, '✅':2, '💡':3 };
-  const sorted = [...flags].sort((a,b)=>(order[a.icon]??9)-(order[b.icon]??9));
-  let html = '<div class="card">';
-  let plain = 0;
-  sorted.forEach(f => {
-    const meta = FLAG[f.icon] || FLAG['🌟'];
-    if (f.icon === '🚨'){
-      html += `<div class="g-flag urgent">
-        <span class="tag" style="background:${meta.tagBg};color:${meta.tagFg};margin-top:2px">${meta.label}</span>
-        <div style="flex-grow:1"><div class="txt">${esc(f.text)}</div>
-          <button class="act" onclick="onAsk('urgent')">See what happened ›</button></div></div>`;
-    } else {
-      if (plain > 0) html += '<div class="divider"></div>';
-      html += `<div class="g-row"><span class="tag" style="background:${meta.tagBg};color:${meta.tagFg}">${meta.label}</span>
-        <div class="txt">${esc(f.text)}</div></div>`;
-      plain++;
+  function glance(d){
+    const sorted=[...d.flags].sort((a,b)=>(ORDER[a.icon]??9)-(ORDER[b.icon]??9));
+    let html='<div class="sfo-card">', plain=0;
+    if(!sorted.length) html+='<div class="sfo-muted" style="font-size:13px;padding:6px 0">No notes for this period yet — tap refresh to generate them.</div>';
+    sorted.forEach(f=>{
+      const m=FLAG[f.icon]||FLAG['🌟'];
+      if(f.icon==='🚨'){
+        html+=`<div class="sfo-flag"><span class="sfo-tag" style="background:${m.tagBg};color:${m.tagFg};margin-top:2px">${m.label}</span>
+          <div style="flex-grow:1"><div class="sfo-txt">${esc(f.text)}</div>
+          <button class="sfo-act" data-ask="🚨">See what happened ›</button></div></div>`;
+      }else{
+        if(plain>0) html+='<div class="sfo-div"></div>';
+        html+=`<div class="sfo-grow"><span class="sfo-tag" style="background:${m.tagBg};color:${m.tagFg}">${m.label}</span><div class="sfo-txt">${esc(f.text)}</div></div>`;
+        plain++;
+      }
+    });
+    if(d.content){
+      html+= showFull
+        ? `<div class="sfo-full">${markdown(d.content)}</div><button class="sfo-fullbtn" data-act="less">Show less ▲</button>`
+        : `<button class="sfo-fullbtn" data-act="full">This period in full ›</button>`;
     }
-  });
-  html += '<button class="fullbtn" onclick="onFull()">This period in full ›</button></div>';
-  return html;
-}
+    return html+'</div>';
+  }
 
-/* For you — actionable cards derived from the same flags */
-function forYouHTML(flags){
-  const cards = flags.filter(f => (FLAG[f.icon]||{}).coach && (FLAG[f.icon].coach.cta || FLAG[f.icon].coach.desc!==undefined))
-    .map(f => {
-      const c = FLAG[f.icon].coach;
-      const desc = c.desc || f.text;
-      return `<div class="coach" style="background:${c.bg}">
-        <div class="head">
-          <div class="ico" style="background:${c.ico};color:${c.icoFg}">${coachIcon(f.icon)}</div>
-          <div class="name" style="${f.icon==='🚨'?'color:var(--coral-dark)':''}">${esc(c.name)}</div>
-          ${c.cta?`<button class="cta" style="${f.icon==='🚨'?'color:var(--coral-dark)':''}" onclick="onAsk('${f.icon}')">${c.cta}</button>`:''}
-        </div>
-        <div class="desc">${esc(desc)}</div></div>`;
+  function foryou(d){
+    const cards=d.flags.filter(f=>(FLAG[f.icon]||{}).coach).map(f=>{
+      const c=FLAG[f.icon].coach;
+      return `<div class="sfo-coach" style="background:${c.bg}">
+        <div class="sfo-hd"><div class="sfo-ico" style="background:${c.ig};color:${c.ic}">${FLAG[f.icon].ico}</div>
+          <div class="sfo-nm" style="${c.coral?'color:var(--sfo-coral-dark)':''}">${esc(c.name)}</div>
+          <button class="sfo-cta" style="${c.coral?'color:var(--sfo-coral-dark)':''}" data-ask="${f.icon}">Ask ›</button></div>
+        <div class="sfo-desc">${esc(f.text)}</div></div>`;
     }).join('');
-  return `<div class="foryou">${cards || '<div class="muted" style="font-size:13px;padding:8px">Nothing to action this week.</div>'}</div>`;
-}
+    return `<div class="sfo-foryou">${cards||'<div class="sfo-muted" style="font-size:13px;padding:8px">Nothing to action this week.</div>'}</div>`;
+  }
 
-/* Hooks — wire these to your existing functions */
-function onAsk(kind){ alert('Wire to your askAbout(...) — kind: '+kind); }
-function onFull(){ alert('Wire to your "This period in full" (renderSummaryMarkdown of summaries.content).'); }
-document.getElementById('refresh').onclick = () => alert('Wire to your generateSummary() → POST summaryWebhook, then loadOverview().');
+  // Use your app's markdown renderer if present, else a safe minimal fallback
+  function markdown(raw){
+    if(typeof renderSummaryMarkdown==='function'){ try{ return renderSummaryMarkdown(raw); }catch(e){} }
+    return esc(raw).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+  }
 
-render();
+  function wire(root){
+    root.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{ tab=+el.dataset.tab; render(); });
+    root.querySelectorAll('.sfo-period button').forEach(b=>b.onclick=()=>{
+      const sel=document.getElementById('timeframe-select');
+      if(sel){ sel.value=b.dataset.v; sel.dispatchEvent(new Event('change')); }
+      load();
+    });
+    root.querySelectorAll('[data-ask]').forEach(b=>b.onclick=()=>{
+      const q=((FLAG[b.dataset.ask]||{}).coach||{}).q || 'Tell me more about this.';
+      if(typeof askAbout==='function') askAbout(q); else alert(q);
+    });
+    root.querySelectorAll('[data-act]').forEach(b=>b.onclick=async()=>{
+      const a=b.dataset.act;
+      if(a==='note'){ noteHidden=true; render(); }
+      else if(a==='full'){ showFull=true; render(); }
+      else if(a==='less'){ showFull=false; render(); }
+      else if(a==='refresh'){
+        b.style.opacity=.5;
+        try{ if(typeof generateSummary==='function') await generateSummary(); }catch(e){}
+        await load();
+      }
+    });
+  }
 
-/* ══════════════════════════════════════════════════════════════
-   HOW TO FILL OVERVIEW FROM SUPABASE (drop-in for your app)
-   ──────────────────────────────────────────────────────────────
-async function loadOverview(tfKey){
-  const res = await fetch(
-    `${config.supabaseUrl}/rest/v1/summaries?timeframe=eq.${encodeURIComponent(tfKey)}&order=created_at.desc&limit=1`,
-    { headers: { apikey: config.supabaseKey, Authorization: `Bearer ${config.supabaseKey}` } }
-  );
-  const [row] = await res.json();
-  if (!row) return;
-  OVERVIEW.createdAt = row.created_at;
-  OVERVIEW.headline  = row.headline || '';                       // NEW column
-  OVERVIEW.flags     = typeof row.flags === 'string' ? JSON.parse(row.flags) : (row.flags || []);
-  // OVERVIEW.stats stays from your existing sessions math (updateStats)
-  render();
-}
-   ══════════════════════════════════════════════════════════════ */
+  return { load, render, get data(){ return data; } };
+})();
 </script>
-</body>
-</html>
+
+
+<!-- ───────────────── PART C · call it when the Overview tab shows ─────────────────
+     In YOUR switchPSub(sub) function, after it makes 'overview' visible, add:
+
+         if (sub === 'overview' && window.SFOverview) SFOverview.load();
+
+     (Your switchPSub already runs updateStats() etc. — put the line right there.)
+     Also call SFOverview.load() once after your initial sessions have loaded,
+     so the Overview is populated the first time the parent opens it.
+     ───────────────────────────────────────────────────────────────────────────── -->
