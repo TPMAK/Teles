@@ -947,6 +947,9 @@ function logout() {
 /* ══════ STATE ══════ */
 let currentSubject = 'General';
 let currentSessionId = null;
+let currentSubjects = [];      // every subject tag the tutor gave this session
+let safetyFlags = [];          // Opus 5 classifier results (concern/urgent), newest first
+let cachedSummaryAt = null;    // created_at of the summary shown for the current timeframe
 let sessionMessages = [];
 let photoBase64 = null;
 let allSessions = [];
@@ -1001,7 +1004,7 @@ async function initParentApp() {
 
   // Kick the data loads off in the background — nothing here blocks the reveal.
   const dataReady = (async () => {
-    await loadSessions();
+    await Promise.all([loadSessions(), loadSafetyFlags()]);
     onTimeframeChange();
     await loadCachedSummary();
   })();
@@ -1428,6 +1431,7 @@ function startNewSession() {
   // Reset state
   currentSessionId = generateId();
   currentSubject = 'General';
+  currentSubjects = [];
   sessionMessages = [];
   sessionActiveSeconds = 0;
   photoBase64 = null;
@@ -1514,6 +1518,9 @@ async function sendMessage() {
     const data = await res.json();
     const reply = data.reply || data.message || data.text || JSON.stringify(data);
     if (data.subject && typeof data.subject === 'string') currentSubject = data.subject;
+    (Array.isArray(data.subjects) ? data.subjects : [data.subject]).forEach(x => {
+      if (x && typeof x === 'string' && !currentSubjects.includes(x)) currentSubjects.push(x);
+    });
     hideThinking(thinkId);
     const tutorMsg = { role: 'tutor', text: reply, time: new Date().toISOString() };
     sessionMessages.push(tutorMsg);
@@ -1567,11 +1574,16 @@ function hideThinking(id) { const el = document.getElementById(id); if (el) el.r
 /* ══════ STORAGE — Supabase primary, localStorage fallback ══════ */
 function saveCurrentSession() {
   if (sessionMessages.length < 2) return;
+  const prev = allSessions.find(s => s.id === currentSessionId);
+  // A continued session gets a fresh one-line summary next time it's tapped
+  const keepSummary = prev && prev.summary && prev.messages.length === sessionMessages.length;
   const session = {
     id: currentSessionId, subject: currentSubject, date: new Date().toISOString(),
     messages: [...sessionMessages], photoCount: sessionMessages.filter(m => m.photo).length,
     title: sessionTitle(sessionMessages),
     durationSeconds: sessionActiveSeconds,
+    subjects: currentSubjects.length ? [...currentSubjects] : [currentSubject],
+    summary: keepSummary ? prev.summary : '',
   };
   const idx = allSessions.findIndex(s => s.id === currentSessionId);
   if (idx >= 0) allSessions[idx] = session; else allSessions.unshift(session);
@@ -1628,12 +1640,42 @@ async function loadSessions() {
   }
 }
 
+async function loadSafetyFlags() {
+  try {
+    const res = await fetch(
+      `${config.supabaseUrl}/rest/v1/safety_flags?order=created_at.desc&limit=200`,
+      { headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}` } }
+    );
+    if (res.ok) safetyFlags = await res.json();
+  } catch(e) { console.warn('Safety flags load failed', e); }
+}
+function safetyFlagsInTimeframe() {
+  const days = getTimeframeDays();
+  if (days === null) return [...safetyFlags];
+  const cutoff = days * 24 * 60 * 60 * 1000;
+  return safetyFlags.filter(f => (Date.now() - new Date(f.created_at)) < cutoff);
+}
+// Classifier results become dashboard flags directly, so a safety issue shows up
+// even if no summary has been generated, and the summary model can't drop it.
+function withSafetyFlags(flags) {
+  const tf = safetyFlagsInTimeframe();
+  const urgent = tf.filter(f => f.rating === 'urgent');
+  const concern = tf.filter(f => f.rating === 'concern');
+  const out = urgent.slice(0, 3).map(f => ({ icon: '🚨', text: `Safety check: ${f.reason || 'urgent message flagged'}` }));
+  if (concern.length) out.push({ icon: '⚠️', text: concern.length === 1
+    ? `Safety check: ${concern[0].reason || 'message flagged'}`
+    : `Safety check flagged ${concern.length} messages — latest: ${concern[0].reason || ''}` });
+  // Safety-check flags lead; the summary's own flags are kept (a 🚨 it found in a
+  // transcript may be a different moment, so never drop it).
+  return [...out, ...(flags || [])];
+}
+
 async function pushToSupabase(session) {
   try {
     await fetch(`${config.supabaseUrl}/rest/v1/sessions`, {
       method: 'POST',
       headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify({ id: session.id, subject: session.subject, date: session.date, messages: JSON.stringify(session.messages), photo_count: session.photoCount, message_count: session.messages.length, title: session.title, duration_seconds: session.durationSeconds })
+      body: JSON.stringify({ id: session.id, subject: session.subject, date: session.date, messages: JSON.stringify(session.messages), photo_count: session.photoCount, message_count: session.messages.length, title: session.title, duration_seconds: session.durationSeconds, subjects: session.subjects, summary: session.summary || null })
     });
   } catch(e) { console.warn('Supabase push failed:', e); }
 }
@@ -1726,6 +1768,7 @@ function resumeSession() {
   // Load the past session as the active one
   currentSessionId = session.id;
   currentSubject = session.subject || 'General';
+  currentSubjects = (session.subjects && session.subjects.length) ? [...session.subjects] : [];
   sessionMessages = session.messages.map(m => ({ ...m }));
   photoBase64 = null;
   removePhoto();
@@ -1870,6 +1913,7 @@ function renderSummaryResult(flags, savedAtIso, headline) {
   }
   const TAGS = { '🌟': ['Highlight', 'hl'], '💡': ['Idea', 'idea'], '⚠️': ['Note', ''], '🚨': ['Urgent', 'urgent'], '✅': ['All good', 'hl'] };
   const ORDER = { '🚨': 0, '⚠️': 1, '🌟': 2, '✅': 2, '💡': 3 };
+  flags = withSafetyFlags(flags);
   const sorted = (flags && flags.length) ? [...flags].sort((a, b) => (ORDER[a.icon] ?? 9) - (ORDER[b.icon] ?? 9)) : [];
   document.getElementById('flag-list').innerHTML = sorted.length
     ? sorted.map(f => { const t = TAGS[f.icon] || ['Note', '']; const u = f.icon === '🚨' ? ' urgent' : ''; return `<div class="flag-item${u}"><span class="flag-tag ${t[1]}">${t[0]}</span><span>${escapeHtml(f.text)}</span></div>`; }).join('')
@@ -1894,7 +1938,7 @@ async function loadCachedSummary() {
   // Pull the most recent saved summary from Supabase and show it instantly (no Claude call)
   try {
     const res = await fetch(
-      `${config.supabaseUrl}/rest/v1/summaries?order=created_at.desc&limit=1`,
+      `${config.supabaseUrl}/rest/v1/summaries?timeframe=eq.${encodeURIComponent(document.getElementById('timeframe-select').value)}&order=created_at.desc&limit=1`,
       { headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}` } }
     );
     if (res.ok) {
@@ -1903,6 +1947,7 @@ async function loadCachedSummary() {
         const r = rows[0];
         let flags = [];
         try { flags = typeof r.flags === 'string' ? JSON.parse(r.flags) : (r.flags || []); } catch(e) { flags = []; }
+        cachedSummaryAt = r.created_at;
         renderSummaryResult(flags, r.created_at, r.headline);
         if (r.content) {
           document.getElementById('ai-summary-text').innerHTML = renderSummaryMarkdown(r.content);
@@ -1912,8 +1957,11 @@ async function loadCachedSummary() {
       }
     }
   } catch(e) { console.warn('No cached summary yet', e); }
-  // Nothing saved yet — leave the AI card hidden, prompt via the button
-  renderAskChips();
+  // Nothing saved yet — leave the AI card hidden, prompt via the button.
+  // Safety-check flags still show.
+  cachedSummaryAt = null;
+  document.getElementById('col-written').classList.add('hidden');   // don't show another timeframe's text
+  renderSummaryResult([], null, null);
 }
 
 // Slice a string without cutting through an emoji (surrogate pair) and strip any
@@ -1947,6 +1995,19 @@ async function generateSummary() {
     alert('No sessions in this period yet. Pick a wider timeframe or wait for Aden to do some sessions.');
     return;
   }
+  // Nothing new since the saved summary for this timeframe? Show it, skip the Claude call.
+  await loadSafetyFlags();
+  const latest = Math.max(...scope.map(s => +new Date(s.date)), ...safetyFlagsInTimeframe().map(f => +new Date(f.created_at)));
+  if (cachedSummaryAt && latest <= +new Date(cachedSummaryAt)) {
+    await loadCachedSummary();
+    const label = document.getElementById('generate-btn-label');
+    if (label) { const t = label.textContent; label.textContent = 'Already up to date ✓'; setTimeout(() => { label.textContent = t; }, 2000); }
+    return;
+  }
+  // Wide timeframes: shorter messages, and only the start + end of very long sessions
+  const days = getTimeframeDays();
+  const wide = days === null || days >= 30;
+  const trimMsgs = msgs => (wide && msgs.length > 30) ? [...msgs.slice(0, 15), ...msgs.slice(-15)] : msgs;
   document.getElementById('loading-bar-wrap').classList.remove('hidden');
   setRefreshLoading(true);
   try {
@@ -1956,15 +2017,18 @@ async function generateSummary() {
       body: JSON.stringify({
         mode: 'summary',
         timeframe: getTimeframeLabel(),
+        timeframeKey: document.getElementById('timeframe-select').value,
+        safetyFlags: safetyFlagsInTimeframe(),
         sessions: scope.map(s => ({
           subject: s.subject, date: s.date, messageCount: s.messages.length,
-          messages: s.messages.map(m => ({ role: m.role, content: safeSlice(m.text, 300) }))
+          messages: trimMsgs(s.messages).map(m => ({ role: m.role, content: safeSlice(m.text, wide ? 150 : 300) }))
         }))
       })
     });
     const data = await res.json();
     const flags = data.flags || [];
-    renderSummaryResult(flags, new Date().toISOString(), data.headline);
+    cachedSummaryAt = new Date().toISOString();
+    renderSummaryResult(flags, cachedSummaryAt, data.headline);
     if (data.summary) {
       document.getElementById('ai-summary-text').innerHTML = renderSummaryMarkdown(data.summary);
       document.getElementById('col-written').classList.remove('hidden');
@@ -2086,6 +2150,7 @@ async function askQuestion(presetQ) {
         question: q,
         timeframe: getTimeframeLabel(),
         history: askHistory.slice(-6),
+        safetyFlags: safetyFlagsInTimeframe(),
         sessions: scope.map(s => ({
           subject: s.subject, date: s.date, messageCount: s.messages.length,
           messages: s.messages.map(m => ({ role: m.role, content: safeSlice(m.text, 500) }))
@@ -2247,7 +2312,8 @@ window.SFOverview = (function(){
     let headline='', content='', flags=[], createdAt=new Date().toISOString();
     try{
       const cfg = (typeof config !== 'undefined') ? config : {};
-      const res = await fetch(`${cfg.supabaseUrl}/rest/v1/summaries?order=created_at.desc&limit=1`,
+      const tf = (document.getElementById('timeframe-select')||{}).value || '7';
+      const res = await fetch(`${cfg.supabaseUrl}/rest/v1/summaries?timeframe=eq.${encodeURIComponent(tf)}&order=created_at.desc&limit=1`,
         { headers:{ apikey:cfg.supabaseKey, Authorization:'Bearer '+cfg.supabaseKey } });
       const rows = await res.json();
       const r = rows && rows[0];
@@ -2255,6 +2321,7 @@ window.SFOverview = (function(){
         try{ flags = typeof r.flags==='string' ? JSON.parse(r.flags) : (r.flags||[]); }catch(e){ flags=[]; } }
     }catch(e){ console.warn('SFOverview load failed', e); }
 
+    if (typeof withSafetyFlags === 'function') flags = withSafetyFlags(flags);
     data = { tfLabel, createdAt, headline, content, sessions, timeText, subjects, flags };
     render();
   }
