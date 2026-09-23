@@ -1276,7 +1276,8 @@ function renderParentSessions() {
   }
   list.innerHTML = scope.map(s => {
     const preview = s.messages.find(m => m.role === 'tutor');
-    const pt = preview ? preview.text.slice(0,110) + (preview.text.length > 110 ? '…' : '') : '';
+    const previewText = preview ? stripMarkdown(preview.text) : '';
+    const pt = previewText ? previewText.slice(0,110) + (previewText.length > 110 ? '…' : '') : '';
     const title = s.title || sessionTitle(s.messages);
     const when = `${formatDate(s.date)} · ${s.messages.length} message${s.messages.length !== 1 ? 's' : ''}${s.photoCount > 0 ? ` · ${s.photoCount} photo${s.photoCount !== 1 ? 's' : ''}` : ''}`;
     const open = openSessSummaries.has(s.id) && s.summary;
@@ -1685,7 +1686,8 @@ function renderHistory() {
   count.textContent = `${shown.length} session${shown.length !== 1 ? 's' : ''}`;
   list.innerHTML = shown.map(s => {
     const preview = s.messages.find(m => m.role === 'tutor');
-    const pt = preview ? preview.text.slice(0,100) + (preview.text.length > 100 ? '…' : '') : '';
+    const previewText = preview ? stripMarkdown(preview.text) : '';
+    const pt = previewText ? previewText.slice(0,100) + (previewText.length > 100 ? '…' : '') : '';
     const title = s.title || sessionTitle(s.messages);
     return `<button type="button" class="session-card" onclick="openSession('${s.id}')">
       <div class="sc-top"><div class="sc-badges">${renderSubjectBadges(s)}</div><span class="session-card-date">${formatDateTime(s.date)}</span></div>
@@ -2123,6 +2125,18 @@ function sessionTitle(messages) {
   return t.length > 60 ? t.slice(0, 60).trim() + '…' : t;
 }
 function escapeHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Session-card previews show a plain-text snippet of a tutor reply, which is markdown
+// (the same text rendered with renderSummaryMarkdown elsewhere) — strip the syntax so
+// "**7 x 4**" doesn't show as literal asterisks in a one-line preview.
+function stripMarkdown(s) {
+  return (s || '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 function renderSummaryMarkdown(raw) {
   const lines = (raw || '').split('\n');
   let html = '', inList = false;
