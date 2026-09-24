@@ -1595,8 +1595,11 @@ async function loadSessions() {
   // Show loading state
   document.getElementById('session-status').textContent = 'Loading...';
   try {
+    // sessions_list = the sessions table with photos swapped for a hasPhoto
+    // marker. Photos are base64 and made this download ~12 MB, which failed on
+    // phones and left the overview at 0 sessions. Photos load on open instead.
     const res = await fetch(
-      `${config.supabaseUrl}/rest/v1/sessions?order=date.desc&limit=100`,
+      `${config.supabaseUrl}/rest/v1/sessions_list?order=date.desc&limit=100`,
       { headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}` } }
     );
     if (res.ok) {
@@ -1740,9 +1743,26 @@ function renderHistory() {
   }).join('');
 }
 let overlaySessionId = null;
-function openSession(id) {
+// The session list comes without photos (see loadSessions). Before showing or
+// resuming a session that had photos, pull its full messages once.
+async function ensureSessionPhotos(session) {
+  if (!session.messages.some(m => m.hasPhoto && !m.photo)) return;
+  try {
+    const res = await fetch(
+      `${config.supabaseUrl}/rest/v1/sessions?id=eq.${encodeURIComponent(session.id)}&select=messages`,
+      { headers: { 'apikey': config.supabaseKey, 'Authorization': `Bearer ${config.supabaseKey}` } }
+    );
+    if (!res.ok) return;
+    const rows = await res.json();
+    if (!rows[0]) return;
+    const full = typeof rows[0].messages === 'string' ? JSON.parse(rows[0].messages) : rows[0].messages;
+    if (Array.isArray(full)) session.messages = full;
+  } catch(e) { console.warn('Could not load session photos', e); }
+}
+async function openSession(id) {
   const session = allSessions.find(s => s.id === id);
   if (!session) return;
+  await ensureSessionPhotos(session);
   overlaySessionId = id;
   document.getElementById('overlay-title').textContent = session.title || sessionTitle(session.messages);
   document.getElementById('overlay-meta').textContent = `${session.subject} · ${formatDateTime(session.date)} · ${session.messages.length} messages`;
@@ -1758,9 +1778,10 @@ function openSession(id) {
 function closeOverlay(e) { if (e.target === document.getElementById('session-overlay')) document.getElementById('session-overlay').classList.add('hidden'); }
 
 /* ══════ RESUME A PAST SESSION INTO THE LIVE CHAT ══════ */
-function resumeSession() {
+async function resumeSession() {
   const session = allSessions.find(s => s.id === overlaySessionId);
   if (!session) return;
+  await ensureSessionPhotos(session);
 
   // Save any in-progress session before switching
   saveCurrentSession();
@@ -2183,7 +2204,7 @@ function sessionTitle(messages) {
   const firstUser = (messages || []).find(m => m.role === 'user' && (m.text || '').trim());
   let t = firstUser ? firstUser.text.trim() : '';
   if (!t) {
-    const hasPhoto = (messages || []).some(m => m.photo);
+    const hasPhoto = (messages || []).some(m => m.photo || m.hasPhoto);
     return hasPhoto ? '📸 Homework photo' : 'Chat session';
   }
   t = t.replace(/\s+/g, ' ');
