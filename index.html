@@ -1006,8 +1006,7 @@ async function initParentApp() {
   const dataReady = (async () => {
     await Promise.all([loadSessions(), loadSafetyFlags()]);
     onTimeframeChange();
-    await loadCachedSummary();
-    autoRefreshIfStale();   // newer chat than the saved summary? update quietly
+    await loadCachedSummary();   // latest hourly summary from n8n; ↻ to regenerate now
   })();
 
   let revealed = false;
@@ -1823,18 +1822,12 @@ function latestActivityMs() {
   return Math.max(...scope.map(s => +new Date(s.date)), ...safetyFlagsInTimeframe().map(f => +new Date(f.created_at)));
 }
 
-// Show-cached-instantly, then catch up quietly. n8n also refreshes every hour
-// ("Teles - Auto Refresh Summaries"), so this mostly fires right after a chat.
-function autoRefreshIfStale() {
-  if (currentRole !== 'parent' || summaryInFlight) return;
-  const latest = latestActivityMs();
-  if (!latest) return;
-  if (cachedSummaryAt && latest <= +new Date(cachedSummaryAt)) return;
-  generateSummary({ quiet: true });
-}
+// Summaries are kept fresh by n8n ("Teles - Auto Refresh Summaries": week +
+// 2 weeks hourly, month + all time nightly). The app only ever shows the latest
+// saved one; Claude runs from here only when the parent taps ↻.
 
 // Coming back to the app (PWA resumed, tab re-focused): pull fresh sessions and
-// catch up, at most once every 2 minutes.
+// the latest saved summary, at most once every 2 minutes. No Claude call.
 var lastParentSync = Date.now();
 document.addEventListener('visibilitychange', async () => {
   if (document.hidden || currentRole !== 'parent' || Date.now() - lastParentSync < 120000) return;
@@ -1843,7 +1836,7 @@ document.addEventListener('visibilitychange', async () => {
     await Promise.all([loadSessions(), loadSafetyFlags()]);
     onTimeframeChange();
     await loadCachedSummary();
-    autoRefreshIfStale();
+    if (window.SFOverview) SFOverview.load();
   } catch (e) { console.warn('Resume sync failed', e); }
 });
 
@@ -1877,7 +1870,7 @@ function onTimeframeChange() {
     askHistory = [];
     const clearBtn = document.getElementById('ask-clear-btn');
     if (clearBtn) clearBtn.classList.add('hidden');
-    loadCachedSummary().then(autoRefreshIfStale);
+    loadCachedSummary();
   }
   if (window.SFOverview) SFOverview.load();   // refresh the compact overview
   document.body.classList.toggle('sfo-overview', currentPSub === 'overview');
