@@ -1578,7 +1578,10 @@ function saveCurrentSession() {
   // A continued session gets a fresh one-line summary next time it's tapped
   const keepSummary = prev && prev.summary && prev.messages.length === sessionMessages.length;
   const session = {
-    id: currentSessionId, subject: currentSubject, date: new Date().toISOString(),
+    // Date = last message time, not "now": just opening an old chat must not
+    // make it look like Aden used it today (it skewed summaries + the email).
+    id: currentSessionId, subject: currentSubject,
+    date: (sessionMessages[sessionMessages.length - 1] || {}).time || (prev && prev.date) || new Date().toISOString(),
     messages: [...sessionMessages], photoCount: sessionMessages.filter(m => m.photo).length,
     title: sessionTitle(sessionMessages),
     durationSeconds: sessionActiveSeconds,
